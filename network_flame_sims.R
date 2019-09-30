@@ -174,7 +174,7 @@ gen_data = function(feats){
 
 
 ATE_est_error <- function(Y, f, estimator_type, G, A, ATE, Z, 
-                          feature_counts, network_lik_weight, treat_prob) {
+                          feature_counts, network_lik_weight, treat_prob, iterate_FLAME) {
   # Takes in:
   #  The outcome vector Y
   #  The interference vector f
@@ -197,7 +197,7 @@ ATE_est_error <- function(Y, f, estimator_type, G, A, ATE, Z,
   } else if (estimator_type == 'stratified') {
     error <- abs(strat_naive(A, Z, Y) - ATE)
   } else if (estimator_type == 'SANIA') {
-    error <- abs(ind_SANIA(G, Z, Y, treat_prob) - ATE)
+    error <- abs(ind_SANIA(G, Z, Y, mean(Z)) - ATE)
   } else if (estimator_type == 'first_eigenvector') {
     eig <- eigen(A, symmetric = TRUE)
     ev <- eig$vectors[, order(eig$values)[1]] ## Should be unnecessary to sort
@@ -225,10 +225,7 @@ ATE_est_error <- function(Y, f, estimator_type, G, A, ATE, Z,
         (Y[i] - Ymie) * Z[i] + (Ymie - Y[i]) * (1 - Z[i])
     }
     error <- abs(total_treatment_effect / n - ATE)
-  } else if (estimator_type == 'strat_degree') {
-    
-  }
-  else if (estimator_type == 'FLAME') {
+  } else if (estimator_type == 'FLAME') {
     system.time({
     all_subgraphs = threshold_all_neighborhood_subgraphs(G, 'max')
     all_features = gen_all_features(G, all_subgraphs)
@@ -239,7 +236,8 @@ ATE_est_error <- function(Y, f, estimator_type, G, A, ATE, Z,
     dta$outcome = Y
     dta$treated = factor(Z)})
     # print(dim(dta))
-    flame_out <- FLAME_bit(dta, dta, A = A, network_lik_weight = network_lik_weight)
+    flame_out <- FLAME_bit(dta, dta, A = A, 
+                           network_lik_weight = network_lik_weight, iterate_FLAME = iterate_FLAME)
     error <- abs(ATE(flame_out) - ATE)
   } else if (estimator_type == 'FLAM') { #ignore me
 
@@ -287,7 +285,7 @@ simulate_network_matching <- function(sim_type = 'ER',
                                       n_sims = 100,
                                       n_units = 100,
                                       treat_prob = 0.5,
-                                      interference_type = 'drop_untreated_edges',
+                                      interference_type = 'drop_mutual_untreated_edges',
                                       n_treated = floor(n_units / 2),
                                       erdos_renyi_p = 0.07,
                                       standardization_type = '0-1',
@@ -297,7 +295,8 @@ simulate_network_matching <- function(sim_type = 'ER',
                                       estimators,
                                       network_lik_weight = 1, 
                                       coloring = TRUE, 
-                                      n_blocks = 5) {
+                                      n_blocks = 5, 
+                                      iterate_FLAME = FALSE) {
 
   # interference_features are the features that should be used to construct
   # the interference function, their prevalences weighted by the corresponding
@@ -306,6 +305,9 @@ simulate_network_matching <- function(sim_type = 'ER',
   # valid features include:
   #   'degree', 'kstar(n)', which denotes an n-star, 'triangle'
 
+  if (network_lik_weight < 0) {
+    stop('network_lik_weight should be positive, as it weighs the (negative) log-likelihood')
+  }
   stopifnot(length(interference_features) == length(interference_parameters))
   if ('degree_dist' %in% matching_features & length(matching_features) > 1) {
     stop('If matching on degree sequence, cannot match on other features as well')
@@ -404,14 +406,17 @@ simulate_network_matching <- function(sim_type = 'ER',
 
     for (j in 1:length(estimators)) {
       abs_error[sim, j] <-
-        ATE_est_error(Y, f, estimators[j], G, A, ATE, Z, feature_counts, network_lik_weight, treat_prob)
+        ATE_est_error(Y, f, estimators[j], G, A, ATE, Z, 
+                      feature_counts, network_lik_weight, treat_prob, iterate_FLAME)
     }
   }
 
   mean_abs_error <- colMeans(abs_error)
   sd_abs_error <- apply(abs_error, 2, sd)
 
-  print(sprintf('For %d units, %s coloring....', n_units, c('without', 'with')[1 + coloring]))
+  # print(sprintf('For %d units, %s coloring....', n_units, c('without', 'with')[1 + coloring]))
+  print(sprintf('With p = %.2f,', erdos_renyi_p))
+  print(interference_parameters)
   for (i in seq_along(estimators)) {
     'The mean absolute error of the %s estimator was %.2f, with a standard deviation of %.2f' %>%
       sprintf(estimators[i], mean_abs_error[i], sd_abs_error[i]) %>%
@@ -421,44 +426,64 @@ simulate_network_matching <- function(sim_type = 'ER',
 }
 #
 
-interference_features <- list(c('kstar(2)', 'degree'),
-                              c('degree', 'kstar(4)', '3-degree-neighb', 
-                                'betweenness', 'closeness', 'triangle', 'kstar(2)'),
-                              c('degree', 'kstar(4)', '3-degree-neighb', 
-                                'betweenness', 'closeness', 'triangle', 'kstar(2)'))
-
-interference_params <- list(c(10, 10), 
-                            c(1, 1, 1, 1, 1, 1, 1), 
-                            c(1, 1, 1, 10, 5, 1, 1))
-interference_params <- interference_params[[1]]
-interference_features <- interference_features[[1]]
-
-# ## TEST 4
-# interference_params <- list(c(0, 1), c(0, 1), c(0, 1), c(0, 1), c(0, 1), c(0, 1), c(0, 1))
+# interference_features <- list(c('kstar(2)', 'degree'),
+#                               c('degree', 'kstar(4)', '3-degree-neighb', 
+#                                 'betweenness', 'closeness', 'triangle', 'kstar(2)'),
+#                               c('degree', 'kstar(4)', '3-degree-neighb', 
+#                                 'betweenness', 'closeness', 'triangle', 'kstar(2)'))
 # 
-# ## TEST 5
-# interference_params <- list(c(5, 10), c(0, 1), c(0, 1), c(0, 1), c(0, 1), c(5, 10), c(5, 10))
+# interference_params <- list(c(10, 10), 
+#                             c(1, 1, 1, 1, 1, 1, 1), 
+#                             c(1, 1, 1, 10, 5, 1, 1))
+# interference_params <- interference_params[[1]]
+# interference_features <- interference_features[[1]]
 # 
-# ## TEST 6
-# interference_params <- list(c(0, 1), c(0, 1), c(0, 1), c(5, 10), c(5, 10), c(0, 1), c(0, 1))
-
-simul_out <- 
-  simulate_network_matching(sim_type = 'ER', 
-                            n_sims = 50,
-                            n_units = 50,
-                            standardization_type = '0-1',
-                            interference_type = 'drop_mutual_untreated_edgs',
-                            estimators = c('true',
-                                           'first_eigenvector',
-                                           'all_eigenvectors',
-                                           'FLAME',
-                                           'naive', 
-                                           'stratified', 
-                                           'SANIA'),
-                            interference_features = interference_features,
-                            interference_parameters = interference_params,
-                            coloring = FALSE, 
-                            network_lik_weight = 1 / 5000)
-require(beepr)
-beep()
+# # ## TEST 4
+# # interference_params <- list(c(0, 1), c(0, 1), c(0, 1), c(0, 1), c(0, 1), c(0, 1), c(0, 1))
+# # 
+# # ## TEST 5
+# # interference_params <- list(c(5, 10), c(0, 1), c(0, 1), c(0, 1), c(0, 1), c(5, 10), c(5, 10))
+# # 
+# # ## TEST 6
+# # interference_params <- list(c(0, 1), c(0, 1), c(0, 1), c(5, 10), c(5, 10), c(0, 1), c(0, 1))
+# er_p <- c(.05, .07, .1)
+# interference_features <- list(c('kstar(2)', 'degree'),
+#                               c('kstar(2)', 'degree'),
+#                               c('degree', 'kstar(4)', '3-degree-neighb', 
+#                                 'betweenness', 'closeness', 'triangle', 'kstar(2)'),
+#                               c('degree', 'kstar(4)', '3-degree-neighb', 
+#                                 'betweenness', 'closeness', 'triangle', 'kstar(2)'),
+#                               c('degree', 'kstar(4)', '3-degree-neighb', 
+#                                 'betweenness', 'closeness', 'triangle', 'kstar(2)'))
+# 
+# interference_params <- list(c(1, 1), 
+#                             c(1, -1),
+#                             c(-1, 1, 1, 1, 1, -1, 1), 
+#                             c(1, 1, 1, 10, -5, 1, 1), 
+#                             c(-5, 1, 1, 10, -5, 1, 10))
+# 
+# for (i in seq_along(er_p)) {
+#   for (j in seq_along(interference_features)) {
+#     simulate_network_matching(sim_type = 'ER', 
+#                               n_sims = 50,
+#                               n_units = 50,
+#                               erdos_renyi_p = er_p[i],
+#                               standardization_type = 'center',
+#                               interference_type = 'drop_mutual_untreated_edges',
+#                               estimators = c('true',
+#                                              'first_eigenvector',
+#                                              'all_eigenvectors',
+#                                              'FLAME',
+#                                              'naive', 
+#                                              'stratified', 
+#                                              'SANIA'),
+#                               interference_features = interference_features[[j]],
+#                               interference_parameters = interference_params[[j]],
+#                               coloring = FALSE, 
+#                               network_lik_weight = 0,)
+#   }
+# }
+# 
+# require(beepr)
+# beep()
 

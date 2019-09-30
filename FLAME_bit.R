@@ -320,7 +320,7 @@ match_quality_bit <- function(c, data, holdout, num_covs, cur_covs, covs_max_lis
 
 FLAME_bit <- function(data, holdout, tradeoff = 0.1, compute_var = FALSE, PE_function = NULL,
                       model = NULL, ridge_reg = NULL, lasso_reg = NULL,
-                      A = NULL, network_lik_weight = 0) {
+                      A = NULL, network_lik_weight = 0, iterate_FLAME = FALSE) {
 
   require(stringr)
   require(gmp)
@@ -401,11 +401,17 @@ FLAME_bit <- function(data, holdout, tradeoff = 0.1, compute_var = FALSE, PE_fun
   CATE[[level]] <- get_CATE_bit(data, match_index, index, cur_covs, covs_max_list, column, factor_level, compute_var, num_covs)
 
   # Remove matched_units
-  message(paste("number of matched units =", sum(match_index)))
+  # message(paste("number of matched units =", sum(match_index)))
   data = data[!match_index,]
 
   # While there are still covariates for matching
-  while (-1 > 1 && # while((length(cur_covs) > 1)...)
+  if (iterate_FLAME) {
+    n_cov_min <- 1
+  }
+  else {
+    n_cov_min <- Inf
+  }
+  while (length(cur_covs) > n_cov_min && # while((length(cur_covs) > 1)...)
          (sum(data[,'treated'] == 0) > 0) &&
          (sum(data[,'treated'] == 1) > 0)) {
 
@@ -457,7 +463,7 @@ FLAME_bit <- function(data, holdout, tradeoff = 0.1, compute_var = FALSE, PE_fun
 
     # Remove matched_units
     data = data[!match_index,]
-    message(paste("number of matched units =", sum(match_index)))
+    # message(paste("number of matched units =", sum(match_index)))
 
   }
 
