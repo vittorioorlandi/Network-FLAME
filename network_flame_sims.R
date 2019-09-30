@@ -210,7 +210,8 @@ ATE_est_error <- function(Y, f, estimator_type, G, A, ATE, Z,
     error <- abs(total_treatment_effect / n - ATE)
   } else if (estimator_type == 'all_eigenvectors') {
     eig <- eigen(A, symmetric = TRUE)
-    weights <- diag(1 / (1:ncol(eig$vectors))) # Check if eig$vectors = n
+    ########## Might make more sense to weigh the evecs by their inverse evals, no...? 
+    weights <- diag(1 / (1:ncol(eig$vectors))) # Check if eig$vectors = n 
     for (i in 1:n) {
       opposite_treatment <- (Z != Z[i])
       mi <- sapply(which(opposite_treatment),
@@ -429,8 +430,8 @@ interference_features <- list(c('kstar(2)', 'degree'),
 interference_params <- list(c(10, 10), 
                             c(1, 1, 1, 1, 1, 1, 1), 
                             c(1, 1, 1, 10, 5, 1, 1))
-interference_params <- interference_params[[3]]
-interference_features <- interference_features[[3]]
+interference_params <- interference_params[[1]]
+interference_features <- interference_features[[1]]
 
 # ## TEST 4
 # interference_params <- list(c(0, 1), c(0, 1), c(0, 1), c(0, 1), c(0, 1), c(0, 1), c(0, 1))
@@ -439,13 +440,13 @@ interference_features <- interference_features[[3]]
 # interference_params <- list(c(5, 10), c(0, 1), c(0, 1), c(0, 1), c(0, 1), c(5, 10), c(5, 10))
 # 
 # ## TEST 6
-interference_params <- list(c(0, 1), c(0, 1), c(0, 1), c(5, 10), c(5, 10), c(0, 1), c(0, 1))
+# interference_params <- list(c(0, 1), c(0, 1), c(0, 1), c(5, 10), c(5, 10), c(0, 1), c(0, 1))
 
 simul_out <- 
-  simulate_network_matching(sim_type = 'SBM', 
-                            n_sims = 100,
+  simulate_network_matching(sim_type = 'ER', 
+                            n_sims = 50,
                             n_units = 50,
-                            standardization_type = 'center',
+                            standardization_type = '0-1',
                             interference_type = 'drop_mutual_untreated_edgs',
                             estimators = c('true',
                                            'first_eigenvector',
