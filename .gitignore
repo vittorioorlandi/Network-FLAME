@@ -1,4 +1,17 @@
+<<<<<<< HEAD
 .Rproj.user
 .Rhistory
 .RData
 .Ruserdata
+=======
+*.fdb_latexmk
+*.aux
+*.fls
+*.log
+*.out
+*.snm
+*.synctex.gz
+*.toc
+.DS_store
+*.nav
+>>>>>>> c75cfd55dcb67a98d5a356995a53f6a2b0a5925b
