@@ -5,6 +5,7 @@ source('FLAME_bit.R')
 
 # Gives graph
 G <- graph_from_adjacency_matrix(as.matrix(A), mode = 'undirected')
+G <- induced_subgraph(G, vertices_with_treatment_info)
 
 # Enumerates all possible subgraphs and puts into dataframe
 all_subgraphs = threshold_all_neighborhood_subgraphs(G, 'max')
