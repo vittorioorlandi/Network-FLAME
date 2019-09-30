@@ -1,8 +1,12 @@
+LUE <- function(weights, Y) {
+  return(sum(weights * Y))
+}
+
 n_fun <- function(z, d, Z, treated_degree) {
   sum(Z == z & treated_degree == d)
 }
 
-C_fun <- function(d, Z, treated_degree) {
+C_strat_naive <- function(d, Z, treated_degree) {
   n_0d <- n_fun(0, d, Z, treated_degree)
   n_1d <- n_fun(1, d, Z, treated_degree)
   if (n_0d * n_1d == 0) {
@@ -11,11 +15,13 @@ C_fun <- function(d, Z, treated_degree) {
   return(1 / (1 / n_0d + 1 / n_1d))
 }
   
-strat_degree <- function(A, Z) {
+strat_naive <- function(A, Z, Y) {
+  ## Implements stratified naive estimator as given in 
+  ## Proposition 6.5 of Sussman & Airoldi 2017
   d <- colSums(A)
   treated_degree <- colSums(A * Z)
   n <- dim(A)[1]
-  all_C <- vapply(1:n, function(i) {C_fun(d[i], Z, treated_degree)}, 
+  all_C <- vapply(1:n, function(i) {C_strat_naive(d[i], Z, treated_degree)}, 
                   FUN.VALUE = numeric(1))
   C_weight <- all_C / sum(all_C)
   weights <- sapply(1:n, function(i) {
@@ -23,10 +29,57 @@ strat_degree <- function(A, Z) {
     b <- (2 * Z[i] - 1) / n_fun(Z[i], treated_degree[i], Z, treated_degree)
     a * b
   })
-  weights
+  return(LUE(weights, Y))
+}
+
+C_sum_SANIA <- function(n_neighbs, Z, p) {
+  # Need to code this more efficiently 
+  
+  n <- length(Z)
+  C_sum <- vector(mode = 'numeric', length = n)
+  sq_p <- Z * p ^ 2 + (1 - Z) * (1 - p) ^ 2
+  for (i in 1:n) {
+    tmp <- 0
+    for (d in 0:n_neighbs[i]) {
+      tmp <- tmp + choose(n_neighbs[i], d) * p ^ d * (1 - p) ^ (n_neighbs[i] - d)
+    }
+    C_sum[i] <- tmp * sq_p[i]
+  }
+  return(C_sum)
+}
+
+ind_SANIA <- function(G, Z, Y, p) {
+  ## Implements the MIV LUE in the SANIA setting where priors are independent. 
+  ## Specified in Theorem 6.2 of Sussman and Airoldi 2017.
+  ## Currently assumes treatment assigned Bernoulli(p)
+  
+  n <- length(Z)
+  n_neighbs <- ego_size(G)
+  C_sum <- C_sum_SANIA(n_neighbs, Z, p)
+  weights <- (Z * p - (1 - Z) * (1 - p)) / (n * C_sum)
+  return(LUE(weights, Y))
+}
+
+sigma <- function(sig_sq_a, sig_sq_b, sig_sq_c, A, Z) {
+  ## For computing SANASIA estimator from Airoldi & Sussman 2017
+  d_z <- colSums(A * Z)
+  return(sig_sq_a + sig_sq_b * Z + sig_sq_c * d_z * sum(d_z))
+}
+
+SANASIA <- function(A, Z, Y, treatment_prob, treatment_num, sig_sq_a, sig_sq_b, sig_sq_c) {
+  n <- dims(A)[1]
+  n_treated <- sum(Z)
+  if (is.null(treatment_num)) {
+    p_z <- treatment_prob ^ n_treated * 
+      (1 - treatment_prob) ^ (n - n_treated)
+    
+  }
+  return(LUE(weights, Y))
 }
 
 g <- erdos.renyi.game(n = 20, p = 0.15)
 A <- get.adjacency(g, type= 'both', sparse = FALSE)
 Z <- sample(c(0, 1), 20, replace = TRUE)
-print(strat_degree(A, Z))
+# print(tmp <- ind_SANIA(g, Z, 'blah', .05))
+# print(sum(tmp))
+# print(strat_naive(A, Z))

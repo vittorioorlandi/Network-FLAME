@@ -1,23 +1,24 @@
 drop_unmatchable <- function(data) {
   # Called before every covariate is temporarily dropped and the result analyzed
   # Drops any covariates where there are two levels of a factor, one of which is only
-  #   exhibited by a single unit.
+  #   exhibited by a single unit. Also 1-level covariates
   # Will think more about cases where there are n levels of a factor, n - 1 (k?) of which
   #   are only exhibited by a single unit
   # Makes the implicit assumption that these covariates are not useful for prediction
-  print("in here")
+  # print("in here")
   dims <- dim(data)
   if (dims[1] == 2) {
     return(data)
   }
   cov_data <- data[, 1:(dims[2] - 2)]
   unmatchable <- which(vapply(cov_data, function(x) {
-    (nlevels(x) == 1) | ((nlevels(x) == 2) & (1 %in% table(x)))},
+    (length(unique(x)) == 1) | ((length(unique(x)) == 2) & (1 %in% table(x)))},
     FUN.VALUE = logical(1)))
   n_unmatchable <- length(unmatchable)
   if (n_unmatchable > 0) {
     print(sprintf('number unmatchable is %d', n_unmatchable))
-    return(data[, -unmatchable])
+    return(list(data = data[, -unmatchable],
+                unmatchable = unmatchable))
   }
   return(data)
 }
@@ -37,6 +38,10 @@ aggregate_table <- function(list) {
 
 update_matched_bit <- function(data, cur_covs, covs_max_list, compute_var) {
 
+  # browser()
+  ## Tentatively going to say the following: 
+  # p <- ncol(data)
+  # data_wo_t <- as.bigz(as.matrix(data[, 1:(p - 3)])) # -1 for outcome, -1 for matched, -1 for treatment
   data_wo_t <- as.bigz(as.matrix(data[, cur_covs+1])) # the covariates values as a matrix
 
   options("scipen" = 100, "digits" = 4)
@@ -93,6 +98,7 @@ get_CATE_bit <- function(data, match_index, index, cur_covs, covs_max_list, colu
   }
 
   else {
+    # browser()
     d = data[match_index,]
     d[,'b_u'] = index
     d[,'b_u'] = unlist(lapply(d[,'b_u'], as.character))
@@ -176,6 +182,7 @@ match_quality_bit <- function(c, data, holdout, num_covs, cur_covs, covs_max_lis
                               PE_function, model, ridge_reg, lasso_reg, compute_var,
                               A = NULL, network_lik_weight = 0) {
 
+  # browser()
   # temporarily remove covariate c
   covs_to_match = cur_covs[cur_covs != c]
   covs_max_to_match = covs_max_list[-which(cur_covs == c)]
@@ -199,10 +206,21 @@ match_quality_bit <- function(c, data, holdout, num_covs, cur_covs, covs_max_lis
   holdout_ctl <- holdout[holdout[,'treated'] == '0',-(c+1)]
   holdout_ctl <- holdout_ctl[,!(names(holdout_ctl) %in% 'treated')]
 
+  ## Eliminate 0-variance predictors. Sloppy, need to fix. 
+  # all_same <- which(sapply(holdout_ctl, function(x) length(unique(x)) == 1))
+  # if (length(all_same) > 0) {
+  #   holdout_ctl <- holdout_ctl[, -all_same]
+  # }
+  # all_same <- which(sapply(holdout_trt, function(x) length(unique(x)) == 1))
+  # if (length(all_same) > 0) {
+  #   holdout_trt <- holdout_trt[, -all_same]
+  # }
+  
   if (is.null(PE_function)) {
 
     # default PE - ridge regression with 0.1 regularization parameter
     if (is.null(model)) {
+      # browser()
       PE <- GLMNET_PE_bit(holdout_trt, holdout_ctl, lambda = 0.1, alpha = 0)
     }
     else {
@@ -255,16 +273,14 @@ match_quality_bit <- function(c, data, holdout, num_covs, cur_covs, covs_max_lis
   }
   edge_df <- cbind(as.data.frame(edge_mat), edges)
   # print('got here!')
-  all_same <- which(sapply(edge_df, function(x) nlevels(x) == 1))
-  # all_same <- which(sapply(dta, function(x) (is.character(x) | is.factor(x)) & length(unique(x)) < 2))
-  # browser()
+  all_same <- which(sapply(edge_df, function(x) length(unique(x)) == 1))
   if (length(all_same) > 0) {
     edge_df <- edge_df[, -all_same]
   }
   logistic_model <- glm(edges ~ ., family = 'binomial', data = edge_df)
   # print('and here!')
   log_lik <- logLik(logistic_model)
-  print(log_lik)
+  # print(log_lik)
   return(tradeoff * BF + log_lik * network_lik_weight - PE)
 }
 
@@ -307,7 +323,10 @@ FLAME_bit <- function(data, holdout, tradeoff = 0.1, compute_var = FALSE, PE_fun
                       A = NULL, network_lik_weight = 0) {
 
   require(stringr)
-
+  require(gmp)
+  require(glmnet)
+  require(dplyr)
+  
   # browser()
   num_covs <- ncol(data) - 2 # ignore treatment and outcome
   print(num_covs)
@@ -364,8 +383,11 @@ FLAME_bit <- function(data, holdout, tradeoff = 0.1, compute_var = FALSE, PE_fun
 
   # tmp <- drop_unmatchable(data)
   # data <- tmp$data
-
-
+  # unmatchable <- tmp$unmatchable
+  # cur_covs <- cur_covs[-unmatchable]
+  # covs_max_list <- covs_max_list[-unmatchable]
+  # num_covs %<>% subtract(length(unmatchable))
+  # browser()
   # Get matched units without dropping anything
   return_match <- update_matched_bit(data, cur_covs, covs_max_list, compute_var)
   match_index <- return_match[[1]]
@@ -382,16 +404,22 @@ FLAME_bit <- function(data, holdout, tradeoff = 0.1, compute_var = FALSE, PE_fun
   message(paste("number of matched units =", sum(match_index)))
   data = data[!match_index,]
 
-  #while there are still covariates for matching
-  while (0 > 1 && # while((length(cur_covs) > 1)...)
+  # While there are still covariates for matching
+  while (-1 > 1 && # while((length(cur_covs) > 1)...)
          (sum(data[,'treated'] == 0) > 0) &&
          (sum(data[,'treated'] == 1) > 0)) {
 
+    # tmp <- drop_unmatchable(data)
+    # data <- tmp$data
+    # unmatchable <- tmp$unmatchable
+    # cur_covs <- cur_covs[-unmatchable]
+    # covs_max_list <- covs_max_list[-unmatchable]
+    # browser()
     level = level + 1
 
     #Temporarily drop one covariate at a time to calculate Match Quality
     #Drop the covariate that returns highest Match Quality Score
-
+    
     list_score <- unlist(lapply(cur_covs, match_quality_bit, data, holdout, num_covs, cur_covs, covs_max_list,
                                 tradeoff, PE_function, model, ridge_reg, lasso_reg, compute_var,
                                 A, network_lik_weight)) # Only last 2 args are new
@@ -405,9 +433,7 @@ FLAME_bit <- function(data, holdout, tradeoff = 0.1, compute_var = FALSE, PE_fun
       drop <- which(list_score == quality)
     }
 
-    covs_to_drop <- cur_covs[drop]
-
-    cur_covs = cur_covs[! cur_covs %in% covs_to_drop]  #Dropping one covariate
+    cur_covs <- cur_covs[-drop]
 
     if (length(cur_covs) == 0) {
       break
@@ -419,6 +445,7 @@ FLAME_bit <- function(data, holdout, tradeoff = 0.1, compute_var = FALSE, PE_fun
     covs_list[[level]] <- column[(cur_covs + 1)]
 
     # Update Match
+    # browser()
     return_match = update_matched_bit(data, cur_covs, covs_max_list, compute_var)
     match_index = return_match[[1]]
     index = return_match[[2]]
@@ -432,7 +459,6 @@ FLAME_bit <- function(data, holdout, tradeoff = 0.1, compute_var = FALSE, PE_fun
     data = data[!match_index,]
     message(paste("number of matched units =", sum(match_index)))
 
-    # data %<>% drop_unmatchable()
   }
 
   if (nrow(data) != 0) {
@@ -446,25 +472,3 @@ FLAME_bit <- function(data, holdout, tradeoff = 0.1, compute_var = FALSE, PE_fun
   names(return_list) = c("covariate_list", "matched_group", "match_quality", "matched_data")
   return(return_list)
 }
-
-
-#data <- read.csv("/Users/Jerry/Desktop/FLAME Other Document/data_broke_code/this_breaks_FLAME_bit.csv")
-#data[,c(1:20,22)] <- lapply(data[,c(1:20,22)], factor)
-
-#holdout <- data
-#result_bit <- FLAME::FLAME_bit(data, holdout)
-#set.seed(1234)
-#data <- FLAME::Data_Generation(ncontrol= 5000, ntreated = 5000, nimportant = 10,
-#                               ntrivial= 5, non_linear = 5, U = 5)
-#holdout <- data
-#result_bit <- FLAME_bit(data, holdout)
-#data <- read.csv("/Users/Jerry/Desktop/Natality_db_abnormality.csv")
-
-
-#tradeoff <- 0.1
-#PE_function <- NULL
-#model <- NULL
-#ridge_reg <- NULL
-#lasso_reg <- NULL
-#compute_var <- FALSE
-
