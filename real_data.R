@@ -1,10 +1,48 @@
 require(igraph)
+require(magrittr)
 source('network_flame_sims.R')
 source('FLAME_bit.R')
 
+# all_dat <- load('application.RData')
+
+## Load in data, name the adjacency matrix A, outcome Y, treatment Z, categorical covariates X
+# Navigate to where the RProject is
+setwd('/Users/vittorioorlandi/Desktop/Network FLAME/Network-FLAME/')
+A <- 
+  read.csv('./Data/adj_allVillageRelationships_vilno_1.csv',
+           header = FALSE) %>%
+  as.matrix()
+
+demographics <- read.csv('./Data/village_1.csv')
+
+units_with_treatment_info <- demographics$adjmatrix_key
+Y <- demographics$Y
+Z <- demographics$Z
+X <- demographics[, which(!colnames(demographics) %in% c('adjmatrix_key', 'Y', 'Z'))]
+
+untreated <- which(Z == 0)
+
+# To drop control -- control edges 
+A[untreated, untreated] <- 0 
+
+# To drop any edges involving a control individual 
+A[untreated, ] <- 0
+A[, untreated] <- 0
+
+n <- dim(A)[1]
+
+# Brute force symmetry test because isSymmetric.matrix(A) outputs FALSE
+for (i in 1:n) {
+  for (j in 1:n) {
+    if (A[i, j] != A[j, i]) {
+      print(c(i, j))
+    }
+  }
+}
+
 # Gives graph
-G <- graph_from_adjacency_matrix(as.matrix(A), mode = 'undirected')
-G <- induced_subgraph(G, vertices_with_treatment_info)
+G <- graph_from_adjacency_matrix(A, mode = 'undirected')
+G <- induced_subgraph(G, units_with_treatment_info)
 
 # Enumerates all possible subgraphs and puts into dataframe
 all_subgraphs = threshold_all_neighborhood_subgraphs(G, 'max')
@@ -15,7 +53,7 @@ dta = gen_data(all_features)
 ## Check that order of covariates X is same as order of subgraph counts
 dta <- cbind(dta, X)
 
-# Convert everything to factor 
+# Convert everything to factor
 dta = data.frame(sapply(dta, factor), stringsAsFactors = T)
 dta = dta[, order(sapply(dta, function(x) length(levels(x))), decreasing = T)]
 dta <- data.frame(sapply(dta, factor), stringsAsFactors = T)
