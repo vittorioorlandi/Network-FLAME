@@ -37,8 +37,8 @@
 \newcommand{\com}[1]{&&\mbox{(#1)}}
 \newcommand{\bt}{\mathbf{t}}
 \newcommand{\bT}{\mathbf{T}}
-\newcommand{\Gni}{G_{\mathcal{N}_i^\bt}}
-\newcommand{\Gnj}{G_{\mathcal{N}_j^\bt}}
+\newcommand{\Gnit}{G_{\mathcal{N}_i}^\bt}
+\newcommand{\Gnjt}{G_{\mathcal{N}_j}^\bt}
 \newcommand{\btheta}{\boldsymbol{\phi}}
 
 \title{Almost-Matching-Exactly for Treatment Effect Estimation under Network Interference}
@@ -69,7 +69,7 @@
   \begin{itemize}
     \item Since treatment is randomized: $\E[Y_i|\bT = \bt, T_i = t] = \E[Y_i(t, \bT)]$ (Ignorability).
   \end{itemize}
-  \item Units are connected in a network, $G$, in which unit $i$'s \textbf{treated neighborhood subgraph} is $\Gni$.
+  \item Units are connected in a network, $G$, in which unit $i$'s \textbf{treated neighborhood subgraph} is $\Gnit$.
 \end{itemize}
 \end{frame}
 
@@ -94,34 +94,63 @@ Then, in expectation, two units with the same treated neighborhood graph will re
 
 \begin{frame}{Assumptions}
 \begin{enumerate}
-  \item Outcome model: $Y_i = \alpha + t_i\beta_i + f(\Gni) + \epsilon_i$
+  \item Outcome model: $Y_i = \alpha + t_i\beta_i + f_i(\Gnit) + \epsilon_i$
   \begin{itemize}
-    \item $f$ is some interference function dependent on $\Gni$, the \textbf{treated neighborhood subgraph} of unit $i$.
+    \item $f$ is some interference function dependent on $\Gnit$, the \textbf{treated neighborhood subgraph} of unit $i$.
   \end{itemize}
-  \item $\E[\epsilon_i] = 0$
+  \item $\E[\epsilon_i|T_i] = \E[\epsilon_i] = 0$
     \begin{itemize}
     \item Ignorability
   \end{itemize}
-  \item $|\E[f(g)] - \E[f(h)]| \leq K_1||g - h||$
-  \begin{itemize}
-    \item The more similar the neighborhood graphs of $i$ and $j$, the more similar the amount of interference they receive.
-    \item Together with (1), this assumption encodes a version of SANASIA (Airoldi and Sussman, 2018) conditional on unit's neighborhood subgraphs.
+  \item If $\Gnit \simeq \Gnjt$ then $f_i(\Gnit) = f_j(\Gnjt) = f(\Gnit)$.   \begin{itemize}
+    \item Two units with isomorphic neighborhood sugraphs experience the same interference.
+    \item Together with (1), this assumption encodes a version of SANIA (Airoldi and Sussman, 2018) conditional on unit's neighborhood subgraphs.
   \end{itemize}
 \end{enumerate}
+\end{frame}
+\begin{frame}{Matching}
+\begin{itemize}
+  \item Under these assumptions we can match units to recover the effect we are interested in ($\tau_i$)
+  \item For a treated unit $i$, find a control unit $j$, such that $\Gnit \simeq \Gnjt$
+  \item Subtract $Y_j$ from $Y_i$ to recover $\tau_i$ in expectation
+\end{itemize}
+\begin{align*}
+\E[Y_i - Y_j] &= \E[\tau_i + f(\Gnit) - f(\Gnjt) + \epsilon_i + \epsilon_j] = \tau_i
+\end{align*}
+If no unit has exactly $\Gnjt \simeq \Gnit$ we can find a unit that has a neighborhood graph that is not quite equal to $\Gnit$ but is similar enough.
 \begin{alertblock}{Problem}
 How do we represent similarity between neighborhood graphs?
 \end{alertblock}
 \end{frame}
 \begin{frame}{Subgraph Counts}
 	\begin{itemize}
-		\item We'll say that neighborhood graphs are similar if they contain similar counts of subgraphs 
-		\item What subgraphs? How similar must the counts be? How similar does this make the graphs?
-		\item Use FLAME to decide
+		\item We'll say that neighborhood graphs are similar if they contain similar counts of subgraphs
+    \item In fact, if the counts of subgraphs are the exact same, then the neighborhood graphs must be isomorphic.
+    \item We match together units that have the most similar subgraphs
+    \item If no unit matches exactly to another on all subgraph counts, then we must choose which subgraphs we want to match exactly on and which ones we can afford to ignore.
 	\end{itemize}
+\end{frame}
+\begin{frame}{Subgraph Counts}
+\begin{center}
+  \includegraphics[width=0.7\linewidth]{subgraphs.png}
+\end{center}
+This graph has 2 triangles, 6Vs and 4 single edges.
+\end{frame}
+\begin{frame}{$\cdot$AME-Networks}
+\begin{alertblock}{Problem \#2}
+How do we choose which subgraphs we should use to represent the treated neighborhood graphs of our units?
+\end{alertblock}
+\textbf{We need a matching method that \textbf{selects} which subgraphs to match on}
+\begin{enumerate}
+  \item Enumerate (up to isomorphism) all $p$ subgraphs $S_1, \dots, S_p$ seen across all the $\mathcal{N}_i, i = 1, \dots, n$
+  \item For each unit $i$, define the $p$-dimensional vector $S(G_{\mathcal{N}_i^{\mathbf{t}}})$ as the vector whose $j$'th entry is the number of $S_j$ in $\mathcal{N}_i$
+  \item These are likely a lot (maximum on the order of $|\mathcal{N}_i|^2$) and it's unlikely that many units will have identical counts
+  \item The FLAME matching algorithm will automatically select the best subgraphs to match on
+\end{enumerate}
 \end{frame}
 \begin{frame}{FLAME: An Overview}
 	\begin{itemize}
-		\item FLAME (Fast Large-Scale Almost Matching Exactly) is a method for creating interpretable matches between units with discrete covariates
+		\item FLAME (Fast Large-Scale Almost Matching Exactly) is a method for creating interpretable matches between units with discrete covariates that performs variable selection while matching.
 		\begin{enumerate}
 			\item Match units exactly on as many covariates as possible
 			\item Drop a covariate
@@ -134,18 +163,6 @@ How do we represent similarity between neighborhood graphs?
 		\item Tradeoff between making matches and accurate prediction
 	\end{itemize}
 \end{frame}
-\begin{frame}{$\cdot$AME-Networks}
-\begin{alertblock}{Problem \#2}
-How do we choose which subgraphs we should use to represent the treated neighborhood graphs of our units?
-\end{alertblock}
-\textbf{Use FLAME to choose which subgraphs to count!}
-\begin{enumerate}
-	\item Enumerate (up to isomorphism) all $p$ subgraphs $S_1, \dots, S_p$ seen across all the $\mathcal{N}_i, i = 1, \dots, n$
-  \item For each unit $i$, define the $p$-dimensional vector $S(G_{\mathcal{N}_i^{\mathbf{t}}})$ as the vector whose $j$'th entry is the number of $S_j$ in $\mathcal{N}_i$
-  \item These are likely a lot (maximum on the order of $|\mathcal{N}_i|^2$) and it's unlikely that many units will have identical counts
-  \item Use FLAME to make almost-exact matches on subgraph counts 
-\end{enumerate}
-\end{frame}
 \begin{frame}{A Small Change to FLAME}
 We know from our theoretical setup that network statistics should do two things well:
 \begin{enumerate}
@@ -154,13 +171,13 @@ We know from our theoretical setup that network statistics should do two things 
 \end{enumerate}
 To measure how well the our network statistics (subgraphs) are predicting the network, we model the edges of the network as independent conditional on the observed statistics
 \[E_{ij}|x_i, x_j \stackrel{iid}{\sim} \textrm{Bern}(\textrm{logit}(\beta_1'x_i + \beta_2'x_j))\]
-and consider the AIC of the resulting model, $\text{AIC}_{\text{network}}$. 
+and consider the AIC of the resulting model, $\text{AIC}_{\text{network}}$.
 \end{frame}
 
 \begin{frame}{The Modified $\mathtt{PE}$ Function}
 	To ensure FLAME strikes a balance between predicting both the \textbf{outcomes} and the \textbf{network}, we modify the $\mathtt{PE}$ function:
 \begin{align*}
-	{\tt PE} &= \sum_{t = 0}^1\argmin_{f \in \mathcal{F}}\frac{1}{n}\sum_{i = 1}^n(Y_i - f(S(\Gni)))^2\\
+	{\tt PE} &= \sum_{t = 0}^1\argmin_{f \in \mathcal{F}}\frac{1}{n}\sum_{i = 1}^n(Y_i - f(S(\Gnit)))^2\\
          &- \underbrace{D\cdot \text{AIC}_{\text{network}}}_{\text{new component}}
 \end{align*}
 \end{frame}
@@ -185,9 +202,9 @@ and consider the AIC of the resulting model, $\text{AIC}_{\text{network}}$.
 		\item True: nearest neighbor (NN) on true interference
 		\item Naive: naive difference in means
 		\item Eigen All: NN on eigenvalues of adjacency matrix $A$
-		\item Eigen All: NN on largest eigenvalue of $A$	
-		\item Stratified Naive: Stratified degree estimator 
-		\item SANIA: MIVLUE under SANIA	
+		\item Eigen All: NN on largest eigenvalue of $A$
+		\item Stratified Naive: Stratified degree estimator
+		\item SANIA: MIVLUE under SANIA
 		\item FLAME: Our approach
 	\end{itemize}
 \end{frame}
@@ -203,17 +220,17 @@ and consider the AIC of the resulting model, $\text{AIC}_{\text{network}}$.
 \centering
 \includegraphics[height=3in]{unrelated_dense.png}
 \end{frame}
-\begin{frame}{Bias Bound for oracle AME}
-As a preliminary result we can say that, under all the assumptions made before, with the true value of $\btheta$ and $S$ known, and if we choose a match for unit $i$ with treated neighborhood graph $g$ such that:
-\begin{align*}
-j \in {\tt MG(g)} \text{ if } j \in \argmin_{j = 1, \dots, n, T_j = 0} |\btheta^TS(g) - \btheta^TS(\Gnj)|,
-\end{align*}
-then the bias for the CATT of $i$ can be upper bounded by:
-\begin{align*}
-|\E[Y_i - Y_j] - \tau_i| &\leq K_1\sum_{h \in \mathcal{G}}|\btheta^TS(g) - \btheta^TS(h)|\frac{exp(\btheta^TS(h))}{\sum_{\ell \in \mathcal{G}}exp(\btheta^TS(\ell))}\\
-&\times\left[\sum_{d = S(g) - |S(g) - S(h)|}^{S(g) + |S(g) - S(h)|}\frac{D_{\btheta, S}(d)exp(d)}{\sum_{\ell \in \mathcal{G}}exp(\btheta^TS(\ell))}\right]^{n - 1}
-\end{align*}
-\end{frame}
+% \begin{frame}{Bias Bound for oracle AME}
+% As a preliminary result we can say that, under all the assumptions made before, with the true value of $\btheta$ and $S$ known, and if we choose a match for unit $i$ with treated neighborhood graph $g$ such that:
+% \begin{align*}
+% j \in {\tt MG(g)} \text{ if } j \in \argmin_{j = 1, \dots, n, T_j = 0} |\btheta^TS(g) - \btheta^TS(\Gnj)|,
+% \end{align*}
+% then the bias for the CATT of $i$ can be upper bounded by:
+% \begin{align*}
+% |\E[Y_i - Y_j] - \tau_i| &\leq K_1\sum_{h \in \mathcal{G}}|\btheta^TS(g) - \btheta^TS(h)|\frac{exp(\btheta^TS(h))}{\sum_{\ell \in \mathcal{G}}exp(\btheta^TS(\ell))}\\
+% &\times\left[\sum_{d = S(g) - |S(g) - S(h)|}^{S(g) + |S(g) - S(h)|}\frac{D_{\btheta, S}(d)exp(d)}{\sum_{\ell \in \mathcal{G}}exp(\btheta^TS(\ell))}\right]^{n - 1}
+% \end{align*}
+% \end{frame}
 \begin{frame}{Plan: We Want to Hit the October 8 AISTATS Deadline}
 \begin{enumerate}
   \item We need to implement the revised $\tt PE$ function
