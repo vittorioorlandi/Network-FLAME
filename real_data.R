@@ -1,4 +1,3 @@
-## Load in data, name the adjacency matrix A, outcome Y, treatment Z, categorical covariates X
 require(igraph)
 source('network_flame_sims.R')
 source('FLAME_bit.R')

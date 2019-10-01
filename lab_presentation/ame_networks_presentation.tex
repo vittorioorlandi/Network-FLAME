@@ -69,12 +69,12 @@
   \begin{itemize}
     \item Since treatment is randomized: $\E[Y_i|\bT = \bt, T_i = t] = \E[Y_i(t, \bT)]$ (Ignorability).
   \end{itemize}
-  \item Units are connected in a network, $G$, in which unit $i$'s \textbf{neighborhood subgraph} is $\Gni$.
+  \item Units are connected in a network, $G$, in which unit $i$'s \textbf{treated neighborhood subgraph} is $\Gni$.
 \end{itemize}
 \end{frame}
 
 \begin{frame}{The Problem: No SUTVA!}
-Usually we assume that \textit{units' treatments don't influence other units' outcomes}, but we can't do that here because our units are connected in a network:
+Usually we assume SUTVA: that \textit{units' treatments don't influence other units' outcomes}, but we can't do that here because our units are connected in a network:
 \begin{center}
 \includegraphics[height=1.8in]{graph1.png}
 \end{center}
@@ -94,7 +94,7 @@ Then, in expectation, two units with the same treated neighborhood graph will re
 
 \begin{frame}{Assumptions}
 \begin{enumerate}
-  \item Outcome model: $Y_i = \alpha + t_i\tau_i + f(\Gni) + \epsilon_i$
+  \item Outcome model: $Y_i = \alpha + t_i\beta_i + f(\Gni) + \epsilon_i$
   \begin{itemize}
     \item $f$ is some interference function dependent on $\Gni$, the \textbf{treated neighborhood subgraph} of unit $i$.
   \end{itemize}
@@ -112,34 +112,37 @@ Then, in expectation, two units with the same treated neighborhood graph will re
 How do we represent similarity between neighborhood graphs?
 \end{alertblock}
 \end{frame}
-\begin{frame}{The Exponential Random Graph Model for Networks}
-A model in which networks are fully described by a set of statistics, like subgraph counts and nodal attributes. 
-\begin{itemize}
-  \item $\Pr(\Gni = g) = \frac{exp(\btheta^TS(g))}{\sum_{h \in \mathcal{G}} exp{\btheta^TS(h)}}$
-  \item Here $S(g)$ is a function that takes a network and outputs a vector of network statistics
-  \item Two graphs with the same values for the statistics of interest have the same probability
-\end{itemize}
-Here we focus on \textbf{subgraph counts} as statistics, i.e., how many of each subgraph type does each unit have in its treated neighborhood graph.
+\begin{frame}{Subgraph Counts}
+	\begin{itemize}
+		\item We'll say that neighborhood graphs are similar if they contain similar counts of subgraphs 
+		\item What subgraphs? How similar must the counts be? How similar does this make the graphs?
+		\item Use FLAME to decide
+	\end{itemize}
 \end{frame}
-\begin{frame}{Putting It All Together}
-If we make an additional assumption$^*$, that the network statistics represent correctly each unit's neighborhood graphs, i.e.:
-\begin{align*}
-|\E[Y_i(t, \bt)|S(\Gni)=\mathbf{a}] - \E[Y_j(t, \bt)|S(\Gnj)=\mathbf{b}]| \\ \leq K_2||\mathbf{a} - \mathbf{b}||
-\end{align*}
-Then if we match units with similar neighborhood graphs, we will reduce bias and eventually recover the correct treatment effect:
-\begin{align*}
-\E[Y_i(t, \bt)|S(\Gni)=\mathbf{a}] = \E[Y_j(t, \bt)|S(\Gnj)=\mathbf{a}]\quad \forall i, j
-\end{align*}
-$*$ \small{Unclear whether we have to make this assumption or whether it follows from ERGM. }
+\begin{frame}{FLAME: An Overview}
+	\begin{itemize}
+		\item FLAME (Fast Large-Scale Almost Matching Exactly) is a method for creating interpretable matches between units with discrete covariates
+		\begin{enumerate}
+			\item Match units exactly on as many covariates as possible
+			\item Drop a covariate
+			\item Repeat
+		\end{enumerate}
+		\item At each step, drop the covariate maximizing match quality:
+		\[\mathtt{MQ} = C \cdot \mathtt{BF} - \mathtt{PE}\]
+		\item $\mathtt{BF} = $ prop. controls matched + prop. treated matched
+		\item $\mathtt{PE} = $ prediction error achieved by remaining covariates
+		\item Tradeoff between making matches and accurate prediction
+	\end{itemize}
 \end{frame}
 \begin{frame}{$\cdot$AME-Networks}
 \begin{alertblock}{Problem \#2}
-How do we choose which subgraph we should use to represent the treated neighborhood graphs of our units?
+How do we choose which subgraphs we should use to represent the treated neighborhood graphs of our units?
 \end{alertblock}
 \textbf{Use FLAME to choose which subgraphs to count!}
 \begin{enumerate}
-  \item Count all possible subgraphs that are in each unit's treated neighborhood graph
-  \item These are likely a lot and it's unlikely that many units will have the exact same counts
+	\item Enumerate (up to isomorphism) all $p$ subgraphs $S_1, \dots, S_p$ seen across all the $\mathcal{N}_i$, i = 1, \dots, n
+  \item For each unit $i$, count how many of the $S_j$ are in $\mathcal{N}_i$
+  \item These are likely a lot (maximum on the order of $|\mathcal{N}_i|^2$) and it's unlikely that many units will have identical counts
   \item Use FLAME to make almost-exact matches on subgraph counts 
 \end{enumerate}
 \end{frame}
@@ -152,7 +155,7 @@ We know from our theoretical setup that network statistics should do two things 
 Therefore, it makes sense that the FLAME objective should trade-off between these things:
 \begin{align*}
 {\tt PE} &= \sum_{t = 0}^1\argmin_{f \in \mathcal{F}}\frac{1}{n}\sum_{i = 1}^n(Y_i - f(S(\Gni)))^2\\
-         &- C\argmax_{\btheta \in \mathbb{R}^{|S|_0}}\underbrace{\frac{1}{n}\sum_{i=1}^n\btheta^TS(\Gni) - \log\left(\sum_{g \in \mathcal{G}} \btheta^TS(g)\right)}_{\text{ERGM log-likelihood}}
+         &- D\argmax_{\btheta \in \mathbb{R}^{|S|_0}}\underbrace{\frac{1}{n}\sum_{i=1}^n\btheta^TS(\Gni) - \log\left(\sum_{g \in \mathcal{G}} \btheta^TS(g)\right)}_{\text{ERGM log-likelihood}}
 \end{align*}
 \end{frame}
 \begin{frame}{(OLD) Simulation Results}

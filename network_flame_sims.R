@@ -15,10 +15,6 @@ standardize <- function(x, type = '0-1', limits = c(0, 1)) {
   }
 }
 
-weighted_l2 = function(x, y, W){
-  sqrt(t(x - y) %*% W %*% (x - y))
-}
-
 count_degree = function(G){
   dm = max(degree(G))
   X = matrix(0, length(V(G)), dm)
@@ -187,44 +183,15 @@ ATE_est_error <- function(Y, f, estimator_type, G, A, ATE, Z,
   n <- length(Y)
   total_treatment_effect <- 0
   if (estimator_type == 'true') {
-    for (i in 1:n) {
-      opposite_treatment <- (Z != Z[i])
-      Ymif <- Y[opposite_treatment][which.min(abs(f[i] - f[opposite_treatment]))]
-      total_treatment_effect <- total_treatment_effect +
-        (Y[i] - Ymif) * Z[i] + (Ymif - Y[i]) * (1 - Z[i])
-    }
-    error <- abs(total_treatment_effect / n - ATE)
+    error <- abs(true_est(Y, Z, f) - ATE)
   } else if (estimator_type == 'stratified') {
     error <- abs(strat_naive(A, Z, Y) - ATE)
   } else if (estimator_type == 'SANIA') {
     error <- abs(ind_SANIA(G, Z, Y, mean(Z)) - ATE)
   } else if (estimator_type == 'first_eigenvector') {
-    eig <- eigen(A, symmetric = TRUE)
-    ev <- eig$vectors[, order(eig$values)[1]] ## Should be unnecessary to sort
-    for (i in 1:n) {
-      opposite_treatment <- (Z != Z[i])
-      Ymie = Y[opposite_treatment][which.min(abs(ev[i] - ev[opposite_treatment]))]
-      total_treatment_effect <- total_treatment_effect +
-        (Y[i] - Ymie) * Z[i] + (Ymie - Y[i]) * (1 - Z[i])
-    }
-    error <- abs(total_treatment_effect / n - ATE)
+    error <- abs(first_eig(A, Z, Y) - ATE)
   } else if (estimator_type == 'all_eigenvectors') {
-    eig <- eigen(A, symmetric = TRUE)
-    ########## Might make more sense to weigh the evecs by their inverse evals, no...? 
-    weights <- diag(1 / (1:ncol(eig$vectors))) # Check if eig$vectors = n 
-    for (i in 1:n) {
-      opposite_treatment <- (Z != Z[i])
-      mi <- sapply(which(opposite_treatment),
-                   function(x) {
-                     weighted_l2(eig$vectors[i, ], eig$vectors[x, ], weights)})
-
-      mi <- which.min(mi)
-
-      Ymie = Y[opposite_treatment][mi]
-      total_treatment_effect <- total_treatment_effect +
-        (Y[i] - Ymie) * Z[i] + (Ymie - Y[i]) * (1 - Z[i])
-    }
-    error <- abs(total_treatment_effect / n - ATE)
+    error <- abs(all_eigs(A, Z, Y) - ATE)
   } else if (estimator_type == 'FLAME') {
     system.time({
     all_subgraphs = threshold_all_neighborhood_subgraphs(G, 'max')

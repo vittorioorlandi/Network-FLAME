@@ -1,6 +1,62 @@
+# Outcome Weighting -------------------------------------------------------
 LUE <- function(weights, Y) {
   return(sum(weights * Y))
 }
+
+
+# All Eigenvectors --------------------------------------------------------
+weighted_l2 = function(x, y, W){
+  sqrt(t(x - y) %*% W %*% (x - y))
+}
+
+all_eigs <- function(A, Z, Y) {
+  n <- length(Z)
+  eig <- eigen(A, symmetric = TRUE)
+  ########## Might make more sense to weigh the evecs by their inverse evals, no...? 
+  weights <- diag(1 / (1:ncol(eig$vectors))) # Check if eig$vectors = n 
+  for (i in 1:n) {
+    opposite_treatment <- (Z != Z[i])
+    mi <- sapply(which(opposite_treatment),
+                 function(x) {
+                   weighted_l2(eig$vectors[i, ], eig$vectors[x, ], weights)})
+    
+    mi <- which.min(mi)
+    
+    Ymie = Y[opposite_treatment][mi]
+    total_treatment_effect <- total_treatment_effect +
+      (Y[i] - Ymie) * Z[i] + (Ymie - Y[i]) * (1 - Z[i])
+  }
+  return(total_treatment_effect / n)
+}
+
+
+# First Eigenvector -------------------------------------------------------
+first_eig <- function(A, Z, Y) {
+  n <- length(Z)
+  eig <- eigen(A, symmetric = TRUE)
+  ev <- eig$vectors[, order(eig$values)[1]] ## Should be unnecessary to sort
+  for (i in 1:n) {
+    opposite_treatment <- (Z != Z[i])
+    Ymie = Y[opposite_treatment][which.min(abs(ev[i] - ev[opposite_treatment]))]
+    total_treatment_effect <- total_treatment_effect +
+      (Y[i] - Ymie) * Z[i] + (Ymie - Y[i]) * (1 - Z[i])
+  }
+  return(total_treatment_effect / n)
+}
+
+# True Estimator ----------------------------------------------------------
+true_est <- function(Y, Z, f) {
+  n <- length(Z)
+  for (i in 1:n) {
+    opposite_treatment <- (Z != Z[i])
+    Ymif <- Y[opposite_treatment][which.min(abs(f[i] - f[opposite_treatment]))]
+    total_treatment_effect <- total_treatment_effect +
+      (Y[i] - Ymif) * Z[i] + (Ymif - Y[i]) * (1 - Z[i])
+  }
+  return(total_treatment_effect / n)
+}
+
+# Naive Stratified Degree Estimator ---------------------------------------
 
 n_fun <- function(z, d, Z, treated_degree) {
   sum(Z == z & treated_degree == d)
@@ -32,6 +88,8 @@ strat_naive <- function(A, Z, Y) {
   return(LUE(weights, Y))
 }
 
+# (Independent) SANIA -----------------------------------------------------
+
 C_sum_SANIA <- function(n_neighbs, Z, p) {
   # Need to code this more efficiently 
   
@@ -60,6 +118,8 @@ ind_SANIA <- function(G, Z, Y, p) {
   return(LUE(weights, Y))
 }
 
+# SANASIA -----------------------------------------------------------------
+### Incomplete 
 sigma <- function(sig_sq_a, sig_sq_b, sig_sq_c, A, Z) {
   ## For computing SANASIA estimator from Airoldi & Sussman 2017
   d_z <- colSums(A * Z)
@@ -76,10 +136,3 @@ SANASIA <- function(A, Z, Y, treatment_prob, treatment_num, sig_sq_a, sig_sq_b, 
   }
   return(LUE(weights, Y))
 }
-
-g <- erdos.renyi.game(n = 20, p = 0.15)
-A <- get.adjacency(g, type= 'both', sparse = FALSE)
-Z <- sample(c(0, 1), 20, replace = TRUE)
-# print(tmp <- ind_SANIA(g, Z, 'blah', .05))
-# print(sum(tmp))
-# print(strat_naive(A, Z))

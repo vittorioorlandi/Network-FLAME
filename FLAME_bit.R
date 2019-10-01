@@ -326,7 +326,7 @@ FLAME_bit <- function(data, holdout, tradeoff = 0.1, compute_var = FALSE, PE_fun
   require(gmp)
   require(glmnet)
   require(dplyr)
-  
+  ### Plot the drop_unmatchable right here
   # browser()
   num_covs <- ncol(data) - 2 # ignore treatment and outcome
   print(num_covs)
