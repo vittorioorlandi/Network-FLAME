@@ -93,28 +93,26 @@ interference_params <- list(c(1, 1),
                             c(-1, 1, 1, 1, 1, -1, 1), 
                             c(1, 1, 1, 10, -5, 1, 1), 
                             c(-5, 1, 1, 10, -5, 1, 10))
-
-for (i in seq_along(er_p)) {
-  for (j in seq_along(interference_features)) {
-    simulate_network_matching(sim_type = 'ER', 
-                              n_sims = 50,
-                              n_units = 50,
-                              erdos_renyi_p = er_p[i],
-                              standardization_type = 'center',
-                              interference_type = 'drop_mutual_untreated_edges',
-                              estimators = c('true',
-                                             'first_eigenvector',
-                                             'all_eigenvectors',
-                                             'FLAME',
-                                             'naive', 
-                                             'stratified', 
-                                             'SANIA'),
-                              interference_features = interference_features[[j]],
-                              interference_parameters = interference_params[[j]],
-                              coloring = FALSE, 
-                              network_lik_weight = 0)
-  }
-}
+interference_features <- c('triangle', 'degree')
+interference_params <- c(10, 0)
+simulate_network_matching(sim_type = 'ER', 
+                            n_sims = 50,
+                            n_units = 50,
+                            erdos_renyi_p = 0.07,
+                            standardization_type = 'center',
+                            interference_type = 'drop_mutual_untreated_edges',
+                            estimators = c('true',
+                                           'first_eigenvector',
+                                           'all_eigenvectors',
+                                           'FLAME',
+                                           'naive', 
+                                           'stratified', 
+                                           'SANIA'),
+                            interference_features = interference_features,
+                            interference_parameters = interference_params,
+                            coloring = FALSE, 
+                            network_lik_weight = 0, 
+                          iterate_FLAME = FALSE)
 
 require(beepr)
 beep()

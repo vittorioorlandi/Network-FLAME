@@ -140,8 +140,8 @@ How do we choose which subgraphs we should use to represent the treated neighbor
 \end{alertblock}
 \textbf{Use FLAME to choose which subgraphs to count!}
 \begin{enumerate}
-	\item Enumerate (up to isomorphism) all $p$ subgraphs $S_1, \dots, S_p$ seen across all the $\mathcal{N}_i$, i = 1, \dots, n
-  \item For each unit $i$, count how many of the $S_j$ are in $\mathcal{N}_i$
+	\item Enumerate (up to isomorphism) all $p$ subgraphs $S_1, \dots, S_p$ seen across all the $\mathcal{N}_i, i = 1, \dots, n$
+  \item For each unit $i$, define the $p$-dimensional vector $S(G_{\mathcal{N}_i^{\mathbf{t}}})$ as the vector whose $j$'th entry is the number of $S_j$ in $\mathcal{N}_i$
   \item These are likely a lot (maximum on the order of $|\mathcal{N}_i|^2$) and it's unlikely that many units will have identical counts
   \item Use FLAME to make almost-exact matches on subgraph counts 
 \end{enumerate}
@@ -152,11 +152,44 @@ We know from our theoretical setup that network statistics should do two things 
   \item Predict the \textbf{outcomes}
   \item Predict the \textbf{network}
 \end{enumerate}
-Therefore, it makes sense that the FLAME objective should trade-off between these things:
+To measure how well the our network statistics (subgraphs) are predicting the network, we model the edges of the network as independent conditional on the observed statistics
+\[E_{ij}|x_i, x_j \stackrel{iid}{\sim} \textrm{Bern}(\textrm{logit}(\beta_1'x_i + \beta_2'x_j))\]
+and consider the AIC of the resulting model, $\text{AIC}_{\text{network}}$. 
+\end{frame}
+
+\begin{frame}{The Modified $\mathtt{PE}$ Function}
+	To ensure FLAME strikes a balance between predicting both the \textbf{outcomes} and the \textbf{network}, we modify the $\mathtt{PE}$ function:
 \begin{align*}
-{\tt PE} &= \sum_{t = 0}^1\argmin_{f \in \mathcal{F}}\frac{1}{n}\sum_{i = 1}^n(Y_i - f(S(\Gni)))^2\\
-         &- D\argmax_{\btheta \in \mathbb{R}^{|S|_0}}\underbrace{\frac{1}{n}\sum_{i=1}^n\btheta^TS(\Gni) - \log\left(\sum_{g \in \mathcal{G}} \btheta^TS(g)\right)}_{\text{ERGM log-likelihood}}
+	{\tt PE} &= \sum_{t = 0}^1\argmin_{f \in \mathcal{F}}\frac{1}{n}\sum_{i = 1}^n(Y_i - f(S(\Gni)))^2\\
+         &- \underbrace{D\cdot \text{AIC}_{\text{network}}}_{\text{new component}}
 \end{align*}
+\end{frame}
+
+\begin{frame}{Simulation Setup}
+	\begin{itemize}
+		\item Recall the outcome model: $Y_i = \alpha + \beta_i t_i + f(G_{\mathcal{N}_i^\mathbf{t}}) + \epsilon_i$
+		\item The graph $G$ is generated according to Erdos-Renyi or Stochastic Block models
+		\item We consider various forms of $f$ based off different features:
+		\begin{itemize}
+			\item $d_i$: the degree of unit $i$
+   			 \item $\Delta_i$: the number of triangles in $\mathcal{N}_i$
+   			 \item $\dagger_i^k$: the number of units in $\mathcal{N}_i$ with degree $\geq k$
+ 			 \item $\bigstar_i^k$: the number of $k$-stars in $\mathcal{N}_i$
+   			 \item Betweenness$_i$: the vertex betweenness of unit $i$
+    			\item Closeness$_i$: the closeness centrality of unit $i$
+		\end{itemize}
+	\end{itemize}
+\end{frame}
+\begin{frame}{Estimators}
+	\begin{itemize}
+		\item True: nearest neighbor (NN) on true interference
+		\item Naive: naive difference in means
+		\item Eigen All: NN on eigenvalues of adjacency matrix $A$
+		\item Eigen All: NN on largest eigenvalue of $A$	
+		\item Stratified Naive: Stratified degree estimator 
+		\item SANIA: MIVLUE under SANIA	
+		\item FLAME: Our approach
+	\end{itemize}
 \end{frame}
 \begin{frame}{(OLD) Simulation Results}
 \centering

@@ -12,6 +12,7 @@ weighted_l2 = function(x, y, W){
 all_eigs <- function(A, Z, Y) {
   n <- length(Z)
   eig <- eigen(A, symmetric = TRUE)
+  total_treatment_effect <- 0
   ########## Might make more sense to weigh the evecs by their inverse evals, no...? 
   weights <- diag(1 / (1:ncol(eig$vectors))) # Check if eig$vectors = n 
   for (i in 1:n) {
@@ -33,6 +34,7 @@ all_eigs <- function(A, Z, Y) {
 # First Eigenvector -------------------------------------------------------
 first_eig <- function(A, Z, Y) {
   n <- length(Z)
+  total_treatment_effect <- 0
   eig <- eigen(A, symmetric = TRUE)
   ev <- eig$vectors[, order(eig$values)[1]] ## Should be unnecessary to sort
   for (i in 1:n) {
@@ -47,6 +49,7 @@ first_eig <- function(A, Z, Y) {
 # True Estimator ----------------------------------------------------------
 true_est <- function(Y, Z, f) {
   n <- length(Z)
+  total_treatment_effect <- 0
   for (i in 1:n) {
     opposite_treatment <- (Z != Z[i])
     Ymif <- Y[opposite_treatment][which.min(abs(f[i] - f[opposite_treatment]))]
