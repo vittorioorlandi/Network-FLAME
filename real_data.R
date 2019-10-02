@@ -45,7 +45,7 @@ G <- graph_from_adjacency_matrix(A, mode = 'undirected')
 G <- induced_subgraph(G, units_with_treatment_info)
 
 # Enumerates all possible subgraphs and puts into dataframe
-all_subgraphs = threshold_all_neighborhood_subgraphs(G, 'max')
+all_subgraphs = threshold_all_neighborhood_subgraphs(G, 5)
 all_features = gen_all_features(G, all_subgraphs)
 dta = gen_data(all_features)
 
