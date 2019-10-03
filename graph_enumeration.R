@@ -80,6 +80,17 @@
 require(Rcpp)
 require(RcppArmadillo)
 sourceCpp('subgraph_enumerate.cpp')
+A <- matrix(c(0, 1, 1, 0, 1, 
+              1, 0, 0, 0, 1, 
+              1, 0, 0, 0, 0, 
+              0, 0, 0, 0, 0, 
+              1, 1, 0, 0, 0), 
+            nrow = 5)
+Z <- c(1, 1, 1, 1, 1)
+out <- get_node_subgraph_counts(A, Z)
+plot(out[[1]])
+plot(out[[2]])
+
 # Pseudocode 
 # Currently: 
 # For each unit, get list of all possible combinations of neighbors
