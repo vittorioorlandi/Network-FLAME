@@ -69,6 +69,9 @@ count_feature <- function(A, G, feature) {
 threshold_list_subgraphs = function(V, k) {
   if (k == 'max') {
     k <- min(length(V), k)
+  } 
+  else {
+    k <- min(length(V), k)
   }
   sgs = c()
   for (j in 1:k) {
@@ -87,9 +90,12 @@ threshold_list_subgraphs = function(V, k) {
 threshold_all_neighborhood_subgraphs = function(G, k = 'max') {
   # For each vertex i, generates sgs[[i]] which is all possible combinations of
   # ≤ k vertices out of i's neighbors
-  k <- sort(ego_size(G), decreasing = TRUE)[2]
+  # k <- sort(ego_size(G), decreasing = TRUE)[2]
   sgs = list()
   for (i in V(G)) {
+    if (i%%10 == 0) {
+      print(i)
+    }  
     neighbs <- neighbors(G, i)
     if (length(neighbs) == 0)
       sgs[[i]] = numeric(0)
