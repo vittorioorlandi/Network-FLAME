@@ -77,30 +77,74 @@
 #   # dta2 <- gen_data(gen_all_features(g, threshold_all_neighborhood_subgraphs(g, 5)))
 # beep()
 
+my_combn <- function(x, m) {
+  if (length(x) == 1) {
+    return(list(x))
+  }
+  return(combn(x, m, simplify = FALSE))
+}
+
 require(Rcpp)
 require(RcppArmadillo)
+require(igraph)
+require(magrittr)
 sourceCpp('subgraph_enumerate.cpp')
-A <- matrix(c(0, 1, 1, 0, 1, 
-              1, 0, 0, 0, 1, 
-              1, 0, 0, 0, 0, 
-              0, 0, 0, 0, 0, 
-              1, 1, 0, 0, 0), 
-            nrow = 5)
-Z <- c(1, 1, 1, 1, 1)
+G <- erdos.renyi.game(20, 0.07)
+# A <- matrix(c(0, 0, 0, 0, 0, 
+#               0, 0, 0, 1, 1, 
+#               0, 0, 0, 1, 0, 
+#               0, 1, 1, 0, 1, 
+#               0, 1, 0, 1, 0), 
+#             nrow = 5)
+A <- get.adjacency(G, type = 'both', sparse = FALSE)
+n <- dim(A)[1]
+# Z <- c(1, 1, 1, 1, 1)
+Z <- rep(1, n)
 out <- get_node_subgraph_counts(A, Z)
-plot(out[[1]])
-plot(out[[2]])
+max_len <- max(vapply(out, length, numeric(1)))
+out %<>% 
+  sapply(out, function(x) c(x, rep(0, max_len - length(x)))) %>%
+  as.data.frame()
 
-# Pseudocode 
-# Currently: 
-# For each unit, get list of all possible combinations of neighbors
-# Put the above in a list
-# Then, for each entry in the above list, for each possible combination, classify it (and so on)
-# Better: 
-# For each unit:
-#   Get neighborhood 
-#   Get all possible combinations of nodes in the neighborhood
-#   For each of these:
-#     Classify
+system.time({
+  G <- erdos.renyi.game(25, 0.1)
+  A <- get.adjacency(G, type = 'both', sparse = FALSE)
+  for (i in 1:500) {
+    n <- dim(A)[1]
+    Z <- rep(1, n)
+    dta <- get_node_subgraph_counts(A, Z)
+  }
+})
+beep()
 
-  
+
+
+
+
+
+
+
+
+
+
+
+G <- erdos.renyi.game(29, 0.1)
+A <- get.adjacency(G, type = 'both', sparse = FALSE)
+n <- dim(A)[1]
+Z <- rep(1, n)
+dta <- get_node_subgraph_counts(A, Z)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
