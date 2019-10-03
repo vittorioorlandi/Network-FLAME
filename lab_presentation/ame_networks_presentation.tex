@@ -12,6 +12,7 @@
 \usepackage{color}
 \usepackage{tikz}
 \usepackage{graphicx}
+\usepackage{caption}
 \usepackage{setspace}
 \usepackage{bigints}
 \usepackage{algorithm2e}
@@ -192,8 +193,8 @@ and consider the AIC of the resulting model, $\text{AIC}_{\text{network}}$.
    			 \item $\Delta_i$: the number of triangles in $\mathcal{N}_i$
    			 \item $\dagger_i^k$: the number of units in $\mathcal{N}_i$ with degree $\geq k$
  			 \item $\bigstar_i^k$: the number of $k$-stars in $\mathcal{N}_i$
-   			 \item Betweenness$_i$: the vertex betweenness of unit $i$
-    			\item Closeness$_i$: the closeness centrality of unit $i$
+   			 \item $B_i$: the vertex betweenness of unit $i$
+    			\item $C_i$: the closeness centrality of unit $i$
 		\end{itemize}
 	\end{itemize}
 \end{frame}
@@ -208,18 +209,105 @@ and consider the AIC of the resulting model, $\text{AIC}_{\text{network}}$.
 		\item FLAME: Our approach
 	\end{itemize}
 \end{frame}
-\begin{frame}{(OLD) Simulation Results}
-\centering
-\includegraphics[height=3in]{simple.png}
+\begin{frame}{Simulation Results}
+Type 1: $f_i = 10\Delta_i$\\
+Type 2: $f_i = 10d_i + 10\Delta_i$\\
+Type 3: $f_i = -5d_i + 1\Delta_i1 + 10\bigstar_i^2 + 1\bigstar_i^4 + 1\dagger_i^3 + 10B_i -5C_i$\\
+Type 4: $f_i = \dagger_i^3$
+\begin{table}
+\begin{tabular}{lllll}
+\cline{2-5}
+\multicolumn{1}{c}{\textbf{}}          & \multicolumn{4}{c}{\textbf{Interference}}                                                                                              \\ \hline
+\multicolumn{1}{c}{\textbf{Estimator}} & \multicolumn{1}{c}{Type 1} & \multicolumn{1}{c}{Type 2} & \multicolumn{1}{c}{Type 3} & \multicolumn{1}{c}{Type 4}        \\ \hline
+True              & \multicolumn{1}{c}{0.93}            & \multicolumn{1}{c}{1.56}          & \multicolumn{1}{c}{1.75}          & \multicolumn{1}{c}{0.72}          \\ \hline
+FLAME             & \multicolumn{1}{c}{\textbf{2.10}}   & \multicolumn{1}{c}{9.22}          & \multicolumn{1}{c}{6.18} & \multicolumn{1}{c}{\textbf{0.37}} \\ \hline
+SANIA             & \multicolumn{1}{c}{4.07}            & \multicolumn{1}{c}{11.49}         & \multicolumn{1}{c}{9.29} & \multicolumn{1}{c}{0.43} \\ \hline
+Stratified        & \multicolumn{1}{c}{4.35}            & \multicolumn{1}{c}{\textbf{4.04}} & \multicolumn{1}{c}{\textbf{4.94}} & \multicolumn{1}{c}{4.90} \\ \hline
+Eigen             & \multicolumn{1}{c}{2.10}            & \multicolumn{1}{c}{8.68}          & \multicolumn{1}{c}{8.05} & \multicolumn{1}{c}{0.49} \\ \hline
+Naive             & \multicolumn{1}{c}{4.07}            & \multicolumn{1}{c}{11.49}         & \multicolumn{1}{c}{9.29} & \multicolumn{1}{c}{0.43}                             
+\end{tabular}
+\caption*{Mean ATE Over 50 Simulations}
+\end{table}
 \end{frame}
-\begin{frame}{(OLD) Simulation Results}
-\centering
-\includegraphics[height=3in]{even_more_complex.png}
+\begin{frame}{Social Network in India: Background}
+
+	\begin{itemize}
+		\item Using data from Banerjee et al. (2013)
+		\item Estimates how centrality of first informed individuals predicts eventual adoption of the microfinance program
+		\item Network information for sample villages
+		\item Collected 6 months before the actual intervention of information diffusion
+		\item Leaders were the source through which information was disseminated (injection points)
+		\item Village level outcome
+		\item Structural model estimated using simulated moments
+	\end{itemize}
+
 \end{frame}
-\begin{frame}{(OLD) Simulation Results}
-\centering
-\includegraphics[height=3in]{unrelated_dense.png}
+
+\begin{frame}{Social Network in India: Survey Design}
+
+	\begin{itemize}
+		\item Village Survey 
+		\begin{itemize}
+			\item No of HHs, facilities, module on village elders
+		\end{itemize}		
+		
+		\item HH Survey (census)
+		\begin{itemize}
+			\item Dwelling information (wealth index), religion, caste
+		\end{itemize}		
+
+		\item Individual survey of a subsample of villagers
+		\begin{itemize}
+			\item Respondents randomly selected stratified by religion and geographical sublocation. 
+			\item Included social network data across 12 dimensions such as Visitors, socialize, medical advice, borrow/lend money/material goods, general advice, pray together.
+			\item Education, election card, SHGs, language, caste, employment etc. 
+		\end{itemize}		
+
+	\end{itemize}
+
 \end{frame}
+
+\begin{frame}{Social Network in India: Application}
+
+	\begin{itemize}
+		\item Effect of education on participation in self-help groups (SHGs)
+
+		\begin{itemize}
+			\item Hypothesis: Less educated -> more likely to participate in SHGs
+			\item Network endogeneity: Less educated rely more on social network and that in turn have an effect on SHG participation
+		\end{itemize}		
+		
+		\item Effect of education on election participation 
+		\begin{itemize}
+			\item Election participation measured by ownership of election card. 
+			\item Hypothesis: Less educated -> less likely to hold an election card
+			\item However, +ve effect is observed using linear regression. Biased might be caused by omission of social network 
+		\end{itemize}		
+
+		\item Effect of gender on participation in SHGs
+
+	\end{itemize}
+
+\end{frame}
+
+\begin{frame}{Social Network in India: Application}
+
+	\begin{itemize}
+		\item 75 villages
+
+		\begin{itemize}
+			\item Spread across 5 districts, mean distance between villages is 46 km.
+			\item Villages can be considered as independent from each other
+		\end{itemize}		
+				
+		\item Variation across villages and by wealth status of viilages
+		
+		
+	\end{itemize}
+
+\end{frame}
+
+
 % \begin{frame}{Bias Bound for oracle AME}
 % As a preliminary result we can say that, under all the assumptions made before, with the true value of $\btheta$ and $S$ known, and if we choose a match for unit $i$ with treated neighborhood graph $g$ such that:
 % \begin{align*}
@@ -241,7 +329,3 @@ and consider the AIC of the resulting model, $\text{AIC}_{\text{network}}$.
 \end{enumerate}
 \end{frame}
 \end{document}
-
-
-
-

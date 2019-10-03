@@ -56,19 +56,6 @@
 #   a boolean for whether to perform FLAME (TRUE) or simply do 1-round of exact matching (FALSE)
 #   the latter is much more efficient (obviously) and recommended for dense / large networks
 
-
-interference_features <- list(c('kstar(2)', 'degree'),
-                              c('degree', 'kstar(4)', '3-degree-neighb', 
-                                'betweenness', 'closeness', 'triangle', 'kstar(2)'),
-                              c('degree', 'kstar(4)', '3-degree-neighb', 
-                                'betweenness', 'closeness', 'triangle', 'kstar(2)'))
-
-interference_params <- list(c(10, 10), 
-                            c(1, 1, 1, 1, 1, 1, 1), 
-                            c(1, 1, 1, 10, 5, 1, 1))
-interference_params <- interference_params[[1]]
-interference_features <- interference_features[[1]]
-
 # ## TEST 4
 # interference_params <- list(c(0, 1), c(0, 1), c(0, 1), c(0, 1), c(0, 1), c(0, 1), c(0, 1))
 # 
@@ -93,14 +80,26 @@ interference_params <- list(c(1, 1),
                             c(-1, 1, 1, 1, 1, -1, 1), 
                             c(1, 1, 1, 10, -5, 1, 1), 
                             c(-5, 1, 1, 10, -5, 1, 10))
+
 interference_features <- c('triangle', 'degree')
-interference_params <- c(10, 0)
+interference_params <- c(0, 5) 
+
+# interference_features <- 
+#   c('degree', '3-degree-neighb', 'betweenness', 'closeness')
+# interference_params <- c(1, 1, 1, 1)
+
+require(Rcpp)
+require(RcppArmadillo)
+require(igraph)
+require(magrittr)
+sourceCpp('subgraph_enumerate.cpp')
+
 simulate_network_matching(sim_type = 'ER', 
                             n_sims = 50,
                             n_units = 50,
                             erdos_renyi_p = 0.07,
                             standardization_type = 'center',
-                            interference_type = 'drop_mutual_untreated_edges',
+                            interference_type = 'drop_untreated_edges',
                             estimators = c('true',
                                            'first_eigenvector',
                                            'all_eigenvectors',
@@ -110,10 +109,11 @@ simulate_network_matching(sim_type = 'ER',
                                            'SANIA'),
                             interference_features = interference_features,
                             interference_parameters = interference_params,
-                            coloring = FALSE, 
+                            coloring = TRUE, 
                             network_lik_weight = 0, 
-                          iterate_FLAME = FALSE)
-
+                            iterate_FLAME = FALSE,
+                            multiplicative = FALSE, 
+                            threshold = 10)
 require(beepr)
 beep()
 

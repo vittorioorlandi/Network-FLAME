@@ -22,7 +22,7 @@ my_combn <- function(x, m) {
 # Navigate to where the RProject is
 #setwd('/Users/vittorioorlandi/Desktop/Network FLAME/Network-FLAME/')
 setwd("/Users/musaidawan/Dropbox/Duke/Projects/Data for Network paper/Network-FLAME/")
-A <- 
+A <-
   read.csv('./Data/Adjency/adj_allVillageRelationships_vilno_1.csv',
            header = FALSE) %>%
   as.matrix()
@@ -30,33 +30,34 @@ A <-
 demographics <- read.csv('./Data/characteristics_1/village_1.csv')
 
 units_with_treatment_info <- demographics$adjmatrix_key
+A <- A[units_with_treatment_info, units_with_treatment_info]
 Y <- demographics$Y
 Z <- demographics$Z
 X <- demographics[, which(!colnames(demographics) %in% c('adjmatrix_key', 'Y', 'Z'))]
 
 untreated <- which(Z == 0)
 
-# To drop control -- control edges 
-A[untreated, untreated] <- 0 
+# To drop control -- control edges
+# A[untreated, untreated] <- 0
 
-# To drop any edges involving a control individual 
+# To drop any edges involving a control individual
 #A[untreated, ] <- 0
 #A[, untreated] <- 0
 
 n <- dim(A)[1]
 
 # Brute force symmetry test because isSymmetric.matrix(A) outputs FALSE
-for (i in 1:n) {
-  for (j in 1:n) {
-    if (A[i, j] != A[j, i]) {
-      print(c(i, j))
-    }
-  }
-}
+# for (i in 1:n) {
+#   for (j in 1:n) {
+#     if (A[i, j] != A[j, i]) {
+#       print(c(i, j))
+#     }
+#   }
+# }
 
 # Gives graph
 G <- graph_from_adjacency_matrix(A, mode = 'undirected')
-G <- induced_subgraph(G, units_with_treatment_info)
+# G <- induced_subgraph(G, units_with_treatment_info)
 
 # Enumerates all possible subgraphs and puts into dataframe
 #all_subgraphs = threshold_all_neighborhood_subgraphs(G, 3)
@@ -64,6 +65,7 @@ all_subgraphs <- get_neighb_subgraphs(A, 5)
 
 all_features = gen_all_features(G, all_subgraphs)
 dta = gen_data(all_features)
+
 
 # Add covariate information
 ## Check that order of covariates X is same as order of subgraph counts
@@ -82,7 +84,7 @@ dta$treated = factor(Z) # Z should be binary vector
 drop_these <- which(lapply(dta, function(x) length(unique(x))) == 1)
 tmp <- dta[, -drop_these]
 
-# cols with missing values: 
+# cols with missing values:
 lapply(tmp, function(x) sum(is.na(x)) == 1)
 
 # impute missing val by median, lower
@@ -91,4 +93,3 @@ tmp$ration_color_2[is.na(tmp$ration_color_2)] <- as.factor(median(as.numeric(tmp
 # FLAME
 flame_out <- FLAME_bit(tmp, tmp, A = A, network_lik_weight = 0, iterate_FLAME = TRUE)
 ATE_out <- ATE(flame_out)
-

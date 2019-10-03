@@ -20,7 +20,8 @@ drop_unmatchable <- function(data) {
     return(list(data = data[, -unmatchable],
                 unmatchable = unmatchable))
   }
-  return(data)
+  return(list(data = data,
+              unmatchable = c()))
 }
 
 aggregate_table <- function(list) {
@@ -255,7 +256,6 @@ match_quality_bit <- function(c, data, holdout, num_covs, cur_covs, covs_max_lis
                 0,
                 num_control_matched / num_control + num_treated_matched / num_treated)
 
-  # browser()
   if (network_lik_weight == 0) {
     return(tradeoff * BF - PE)
   }
@@ -327,11 +327,9 @@ FLAME_bit <- function(data, holdout, tradeoff = 0.1, compute_var = FALSE, PE_fun
   require(gmp)
   require(glmnet)
   require(dplyr)
-  ### Plot the drop_unmatchable right here
-  # browser()
+  
   num_covs <- ncol(data) - 2 # ignore treatment and outcome
-  print(num_covs)
-
+  
   # Stop if covariates are not factors
   if (Reduce("|", sapply(1:num_covs, function(x) !is.factor(data[,x] ))) |
       Reduce("|", sapply(1:num_covs, function(x) !is.factor(holdout[,x] )))) {
@@ -347,6 +345,11 @@ FLAME_bit <- function(data, holdout, tradeoff = 0.1, compute_var = FALSE, PE_fun
   if (!is.numeric(data[,num_covs + 1]) | !is.numeric(holdout[,num_covs + 1])) {
     stop("Outcome variable is not numeric data type")
   }
+  
+  tmp <- data
+  data <- drop_unmatchable(data)$data
+  num_covs <- ncol(data) - 2 # ignore treatment and outcome
+  print(num_covs)
 
   factor_level <- lapply(data[, 1:num_covs], levels)  # Levels of each factor
   covs_max_list <- sapply(factor_level, length) # Number of levels of each covariate
