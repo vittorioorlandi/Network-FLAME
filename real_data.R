@@ -15,7 +15,6 @@ my_combn <- function(x, m) {
   return(combn(as.integer(x), m, simplify = FALSE))
 }
 
-
 # all_dat <- load('application.RData')
 
 ## Load in data, name the adjacency matrix A, outcome Y, treatment Z, categorical covariates X
