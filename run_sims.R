@@ -56,19 +56,6 @@
 #   a boolean for whether to perform FLAME (TRUE) or simply do 1-round of exact matching (FALSE)
 #   the latter is much more efficient (obviously) and recommended for dense / large networks
 
-
-interference_features <- list(c('kstar(2)', 'degree'),
-                              c('degree', 'kstar(4)', '3-degree-neighb', 
-                                'betweenness', 'closeness', 'triangle', 'kstar(2)'),
-                              c('degree', 'kstar(4)', '3-degree-neighb', 
-                                'betweenness', 'closeness', 'triangle', 'kstar(2)'))
-
-interference_params <- list(c(10, 10), 
-                            c(1, 1, 1, 1, 1, 1, 1), 
-                            c(1, 1, 1, 10, 5, 1, 1))
-interference_params <- interference_params[[1]]
-interference_features <- interference_features[[1]]
-
 # ## TEST 4
 # interference_params <- list(c(0, 1), c(0, 1), c(0, 1), c(0, 1), c(0, 1), c(0, 1), c(0, 1))
 # 
@@ -100,6 +87,12 @@ interference_params <- c(0, 5)
 # interference_features <- 
 #   c('degree', '3-degree-neighb', 'betweenness', 'closeness')
 # interference_params <- c(1, 1, 1, 1)
+
+require(Rcpp)
+require(RcppArmadillo)
+require(igraph)
+require(magrittr)
+sourceCpp('subgraph_enumerate.cpp')
 
 simulate_network_matching(sim_type = 'ER', 
                             n_sims = 50,

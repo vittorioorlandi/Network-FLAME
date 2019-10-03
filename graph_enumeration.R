@@ -81,7 +81,7 @@ my_combn <- function(x, m) {
   if (length(x) == 1) {
     return(list(x))
   }
-  return(combn(x, m, simplify = FALSE))
+  return(combn(as.integer(x), m, simplify = FALSE))
 }
 
 require(Rcpp)
@@ -90,12 +90,12 @@ require(igraph)
 require(magrittr)
 sourceCpp('subgraph_enumerate.cpp')
 G <- erdos.renyi.game(20, 0.07)
-# A <- matrix(c(0, 0, 0, 0, 0, 
-#               0, 0, 0, 1, 1, 
-#               0, 0, 0, 1, 0, 
-#               0, 1, 1, 0, 1, 
-#               0, 1, 0, 1, 0), 
-#             nrow = 5)
+A <- matrix(c(0, 0, 0, 0, 0,
+              0, 0, 0, 1, 1,
+              0, 0, 0, 1, 0,
+              0, 1, 1, 0, 1,
+              0, 1, 0, 1, 0),
+            nrow = 5)
 A <- get.adjacency(G, type = 'both', sparse = FALSE)
 n <- dim(A)[1]
 # Z <- c(1, 1, 1, 1, 1)
@@ -106,45 +106,78 @@ out %<>%
   sapply(out, function(x) c(x, rep(0, max_len - length(x)))) %>%
   as.data.frame()
 
+
 system.time({
-  G <- erdos.renyi.game(25, 0.1)
-  A <- get.adjacency(G, type = 'both', sparse = FALSE)
-  for (i in 1:500) {
+  for (i in 1:50) {
+    G <- erdos.renyi.game(50, 0.07)
+    A <- get.adjacency(G, type = 'both', sparse = FALSE)
+    n <- dim(A)[1]
+    Z <- rep(1, n)
+    all_subgraphs <- threshold_all_neighborhood_subgraphs(G, 'max')
+    features_and_graphs <- gen_all_features(G, all_subgraphs)
+    all_features <- features_and_graphs$feats
+    dta <- gen_data(all_features)
+  }
+})
+
+system.time({
+  for (i in 1:50) {
+    G <- erdos.renyi.game(50, 0.07)
+    A <- get.adjacency(G, type = 'both', sparse = FALSE)
     n <- dim(A)[1]
     Z <- rep(1, n)
     dta <- get_node_subgraph_counts(A, Z)
+    max_len <- max(vapply(dta, length, numeric(1)))
+    dta %<>% 
+      sapply(function(x) c(x, rep(0, max_len - length(x)))) %>%
+      as.data.frame()
   }
 })
 beep()
 
+test_old <- function(n_units, p) {
+  G <- erdos.renyi.game(n_units, p)
+  A <- get.adjacency(G, type = 'both', sparse = FALSE)
+  n <- dim(A)[1]
+  Z <- rep(1, n)
+  all_subgraphs <- threshold_all_neighborhood_subgraphs(G, 'max')
+  features_and_graphs <- gen_all_features(G, all_subgraphs)
+  all_features <- features_and_graphs$feats
+  dta <- gen_data(all_features)
+}
 
+test_new <- function(n_units, p) {
+  G <- erdos.renyi.game(n_units, p)
+  A <- get.adjacency(G, type = 'both', sparse = FALSE)
+  n <- dim(A)[1]
+  Z <- rep(1, n)
+  dta <- get_node_subgraph_counts(A, Z)
+  max_len <- max(vapply(dta, length, numeric(1)))
+  dta %<>% 
+    sapply(function(x) c(x, rep(0, max_len - length(x)))) %>%
+    as.data.frame()
+}
 
-
-
-
-
-
-
-
-
-
-G <- erdos.renyi.game(29, 0.1)
+G <- erdos.renyi.game(70, 0.1)
 A <- get.adjacency(G, type = 'both', sparse = FALSE)
-n <- dim(A)[1]
-Z <- rep(1, n)
-dta <- get_node_subgraph_counts(A, Z)
+microbenchmark(get_neighb_subgraphs(A), 
+               times = 10L)
+beep()
 
+G <- erdos.renyi.game(50, 0.07)
+A <- get.adjacency(G, type = 'both', sparse = FALSE)
+out1 <- threshold_all_neighborhood_subgraphs(G)
+out2 <- get_neighb_subgraphs(A)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+stopifnot(length(out1) == length(out2))
+for (i in 1:length(out1)) {
+  unit <- out1[[i]]
+  if (length(unit) == 0) {
+    next
+  }
+  for (j in 1:length(unit)) {
+    if (!identical(as.vector(out1[[i]][[j]]), out2[[i]][[j]])) {
+      print(sprintf('unit %d and entry %d', i, j))
+    }
+  }
+}

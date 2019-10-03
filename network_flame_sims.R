@@ -232,7 +232,8 @@ ATE_est_error <- function(Y, f, estimator_type, G, A, ATE, Z,
     error <- abs(all_eigs(A, Z, Y) - ATE)
   } else if (estimator_type == 'FLAME') {
     
-    all_subgraphs <- threshold_all_neighborhood_subgraphs(G, threshold)
+    # all_subgraphs <- threshold_all_neighborhood_subgraphs(G, threshold)
+    all_subgraphs <- get_neighb_subgraphs(G, threshold)
     # all_subgraphs <- new_sg_counter(G, threshold)
     features_and_graphs <- gen_all_features(G, all_subgraphs)
     all_features <- features_and_graphs$feats
