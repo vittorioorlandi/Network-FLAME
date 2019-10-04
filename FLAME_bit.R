@@ -16,7 +16,7 @@ drop_unmatchable <- function(data) {
     FUN.VALUE = logical(1)))
   n_unmatchable <- length(unmatchable)
   if (n_unmatchable > 0) {
-    print(sprintf('number unmatchable is %d', n_unmatchable))
+    # print(sprintf('number unmatchable is %d', n_unmatchable))
     return(list(data = data[, -unmatchable],
                 unmatchable = unmatchable))
   }
@@ -400,19 +400,21 @@ FLAME_bit <- function(data, holdout, tradeoff = 0.1, compute_var = FALSE, PE_fun
   return_match <- update_matched_bit(data, cur_covs, covs_max_list, compute_var)
   match_index <- return_match[[1]]
   index <- return_match[[2]]
-  if (sum(match_index) > 0) {
-    matched_inds <- which(match_index)
-    for (i in seq_along(unique(index))) {
-      MG <- matched_inds[which(index == index[i])]
-      MG_outcomes <- data$outcome[MG] 
-      MG_treatments <- data$treated[MG]
-      MG_control <- MG_treatments == 0
-      MG_treated <- MG_treatments == 1
-      mean_control_outcome <- mean(MG_outcomes[MG_control]) # Avg control outcome in this MG
-      TTT <- TTT + sum(MG_outcomes[MG_treated]) - sum(MG_treated) * mean_control_outcome
-      n_matched_treated <- n_matched_treated + sum(MG_treated)
-    }
-  }
+  
+  ## For ATE computation
+  # if (sum(match_index) > 0) {
+  #   matched_inds <- which(match_index)
+  #   for (i in seq_along(unique(index))) {
+  #     MG <- matched_inds[which(index == index[i])]
+  #     MG_outcomes <- data$outcome[MG] 
+  #     MG_treatments <- data$treated[MG]
+  #     MG_control <- MG_treatments == 0
+  #     MG_treated <- MG_treatments == 1
+  #     mean_control_outcome <- mean(MG_outcomes[MG_control]) # Avg control outcome in this MG
+  #     TTT <- TTT + sum(MG_outcomes[MG_treated]) - sum(MG_treated) * mean_control_outcome
+  #     n_matched_treated <- n_matched_treated + sum(MG_treated)
+  #   }
+  # }
 
   # Set matched = num_covs and get those matched units
   data[match_index,'matched'] = length(cur_covs)
@@ -422,7 +424,7 @@ FLAME_bit <- function(data, holdout, tradeoff = 0.1, compute_var = FALSE, PE_fun
   CATE[[level]] <- get_CATE_bit(data, match_index, index, cur_covs, covs_max_list, column, factor_level, compute_var, num_covs)
 
   # Remove matched_units
-  message(paste("number of matched units =", sum(match_index)))
+  # message(paste("number of matched units =", sum(match_index)))
   # if (sum(match_index) > 0) {
   #   MG_units <- which(match_index) # Units matched this iteration
   #   MG_outcomes <- data$outcome[MG_units] 
@@ -486,19 +488,21 @@ FLAME_bit <- function(data, holdout, tradeoff = 0.1, compute_var = FALSE, PE_fun
     return_match = update_matched_bit(data, cur_covs, covs_max_list, compute_var)
     match_index = return_match[[1]]
     index = return_match[[2]]
-    if (sum(match_index) > 0) {
-      matched_inds <- which(match_index)
-      for (i in seq_along(unique(index))) {
-        MG <- matched_inds[which(index == index[i])]
-        MG_outcomes <- data$outcome[MG] 
-        MG_treatments <- data$treated[MG]
-        MG_control <- MG_treatments == 0
-        MG_treated <- MG_treatments == 1
-        mean_control_outcome <- mean(MG_outcomes[MG_control]) # Avg control outcome in this MG
-        TTT <- TTT + sum(MG_outcomes[MG_treated]) - sum(MG_treated) * mean_control_outcome
-        n_matched_treated <- n_matched_treated + sum(MG_treated)
-      }
-    }
+    
+    ## For ATE computation
+    # if (sum(match_index) > 0) {
+    #   matched_inds <- which(match_index)
+    #   for (i in seq_along(unique(index))) {
+    #     MG <- matched_inds[which(index == index[i])]
+    #     MG_outcomes <- data$outcome[MG] 
+    #     MG_treatments <- data$treated[MG]
+    #     MG_control <- MG_treatments == 0
+    #     MG_treated <- MG_treatments == 1
+    #     mean_control_outcome <- mean(MG_outcomes[MG_control]) # Avg control outcome in this MG
+    #     TTT <- TTT + sum(MG_outcomes[MG_treated]) - sum(MG_treated) * mean_control_outcome
+    #     n_matched_treated <- n_matched_treated + sum(MG_treated)
+    #   }
+    # }
 
     # Set matched = num_covs and get those matched units
     data[match_index,'matched'] = length(cur_covs)

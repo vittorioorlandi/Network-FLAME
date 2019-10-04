@@ -27,7 +27,7 @@ net_flame_output <- matrix(NA, nrow = 75, ncol = 3)
 for (qs in c(1,2,3)) {
   for (val in village_codes) {
 
-    val <- 1 
+    val <- 1
     qs <- 1
     print(val)
     #A <-
@@ -39,12 +39,12 @@ for (qs in c(1,2,3)) {
       read.csv(paste('./Data/Adjency/adj_visitgo_vilno_',val,'.csv', sep = ""),
                header = FALSE) %>%
       as.matrix()
-    
+
     A2 <-
       read.csv(paste('./Data/Adjency/adj_visitcome_vilno_',val,'.csv', sep = ""),
                header = FALSE) %>%
       as.matrix()
-    
+
 
     A3 <-
       read.csv(paste('./Data/Adjency/adj_rel_vilno_',val,'.csv', sep = ""),
@@ -55,17 +55,17 @@ for (qs in c(1,2,3)) {
       read.csv(paste('./Data/Adjency/adj_nonrel_vilno_',val,'.csv', sep = ""),
                header = FALSE) %>%
       as.matrix()
-    
-        
+
+
     #adj_visitgo_vilno_
     #adj_visitcome_vilno_
     #adj_rel_vilno_
     #adj_nonrel_vilno_
-    
+
     # union of three adjency matrix
-    A <- ((A1 + A2 + A3 + A4) > 1)*1  
+    A <- ((A1 + A2 + A3 + A4) > 1)*1
     print(paste('average degree is:',mean(rowSums(A))))
-    
+
     #adj_giveadvice_vilno_
     #adj_allVillageRelationships_vilno_
 
@@ -101,14 +101,13 @@ for (qs in c(1,2,3)) {
 
     # Gives graph
     G <- graph_from_adjacency_matrix(A, mode = 'undirected')
-    # G <- induced_subgraph(G, units_with_treatment_info)
 
     # Enumerates all possible subgraphs and puts into dataframe
     # all_subgraphs <- threshold_all_neighborhood_subgraphs(G, 3)
 
     all_subgraphs <- get_neighb_subgraphs(A, units_with_treatment_info, 2)
     all_features = gen_all_features(G, all_subgraphs)
-    
+
     dta = gen_data(all_features[[1]])
 
 
@@ -127,7 +126,7 @@ for (qs in c(1,2,3)) {
     drop_these <- which(lapply(dta, function(x) length(unique(x))) == 1)
     tmp <- dta[, -drop_these]
     # sapply(tmp, class)
-    
+
     # cols with missing values: // should be no missing values, data pre-processing
     # lapply(tmp, function(x) sum(is.na(x)) == 1)
 
