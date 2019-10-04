@@ -216,7 +216,7 @@ ATE_est_error <- function(Y, f, estimator_type, G, A, ATE, Z,
     ## Old method; avoid using if possible
     # all_subgraphs <- threshold_all_neighborhood_subgraphs(G, threshold)
     
-    all_subgraphs <- get_neighb_subgraphs(A, threshold)
+    all_subgraphs <- get_neighb_subgraphs(A, 1:n, threshold)
     features_and_graphs <- gen_all_features(G, all_subgraphs)
     all_features <- features_and_graphs$feats
     sg_types <- features_and_graphs$types
