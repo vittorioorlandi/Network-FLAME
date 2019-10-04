@@ -379,6 +379,10 @@ FLAME_bit <- function(data, holdout, tradeoff = 0.1, compute_var = FALSE, PE_fun
   covs_list <- list() # List of covariates for matching at each level
   CATE <- list() # List of dataframe that calculates conditional average treatment effect at each level
   SCORE <- list()
+  matched_groups <- list()
+  n_matched_groups <- 0
+  TTT <- 0 # Running count of total treatment effect on the treated 
+  n_matched_treated <- 0 # Running count of number of matched units that are treated
 
   # Initialize the current covariates to be all covariates and set level to 1
   cur_covs <- seq(0, num_covs - 1)
@@ -395,6 +399,19 @@ FLAME_bit <- function(data, holdout, tradeoff = 0.1, compute_var = FALSE, PE_fun
   return_match <- update_matched_bit(data, cur_covs, covs_max_list, compute_var)
   match_index <- return_match[[1]]
   index <- return_match[[2]]
+  if (sum(match_index) > 0) {
+    matched_inds <- which(match_index)
+    for (i in seq_along(unique(index))) {
+      MG <- matched_inds[which(index == index[i])]
+      MG_outcomes <- data$outcome[MG] 
+      MG_treatments <- data$treated[MG]
+      MG_control <- MG_treatments == 0
+      MG_treated <- MG_treatments == 1
+      mean_control_outcome <- mean(MG_outcomes[MG_control]) # Avg control outcome in this MG
+      TTT <- TTT + sum(MG_outcomes[MG_treated]) - sum(MG_treated) * mean_control_outcome
+      n_matched_treated <- n_matched_treated + sum(MG_treated)
+    }
+  }
 
   # Set matched = num_covs and get those matched units
   data[match_index,'matched'] = length(cur_covs)
@@ -404,7 +421,17 @@ FLAME_bit <- function(data, holdout, tradeoff = 0.1, compute_var = FALSE, PE_fun
   CATE[[level]] <- get_CATE_bit(data, match_index, index, cur_covs, covs_max_list, column, factor_level, compute_var, num_covs)
 
   # Remove matched_units
-  # message(paste("number of matched units =", sum(match_index)))
+  message(paste("number of matched units =", sum(match_index)))
+  # if (sum(match_index) > 0) {
+  #   MG_units <- which(match_index) # Units matched this iteration
+  #   MG_outcomes <- data$outcome[MG_units] 
+  #   MG_treatments <- data$treated[MG_units]
+  #   MG_control <- MG_treatments == 0
+  #   MG_treated <- MG_treatments == 1
+  #   n_matched_treated <- n_matched_treated + sum(MG_treated)
+  #   mean_control_outcome <- mean(MG_outcomes[MG_control]) # Avg control outcome in this MG
+  #   TTT <- TTT + sum(MG_outcomes[MG_treated]) - n_matched_treated * mean_control_outcome
+  # }
   data = data[!match_index,]
 
   # While there are still covariates for matching
@@ -454,22 +481,45 @@ FLAME_bit <- function(data, holdout, tradeoff = 0.1, compute_var = FALSE, PE_fun
     covs_list[[level]] <- column[(cur_covs + 1)]
 
     # Update Match
-    # browser()
+    
     return_match = update_matched_bit(data, cur_covs, covs_max_list, compute_var)
     match_index = return_match[[1]]
     index = return_match[[2]]
+    if (sum(match_index) > 0) {
+      matched_inds <- which(match_index)
+      for (i in seq_along(unique(index))) {
+        MG <- matched_inds[which(index == index[i])]
+        MG_outcomes <- data$outcome[MG] 
+        MG_treatments <- data$treated[MG]
+        MG_control <- MG_treatments == 0
+        MG_treated <- MG_treatments == 1
+        mean_control_outcome <- mean(MG_outcomes[MG_control]) # Avg control outcome in this MG
+        TTT <- TTT + sum(MG_outcomes[MG_treated]) - sum(MG_treated) * mean_control_outcome
+        n_matched_treated <- n_matched_treated + sum(MG_treated)
+      }
+    }
 
     # Set matched = num_covs and get those matched units
     data[match_index,'matched'] = length(cur_covs)
     return_df = rbind(return_df,data[match_index,])
     CATE[[level]] <- get_CATE_bit(data, match_index, index, cur_covs, covs_max_list, column, factor_level, compute_var, num_covs)
 
+    # if (sum(match_index) > 0) { # Have a new matched group
+    #   MG_units <- which(match_index) # Units matched this iteration
+    #   MG_outcomes <- data$outcome[MG_units] 
+    #   MG_treatments <- data$treated[MG_units]
+    #   MG_control <- MG_treatments == 0
+    #   MG_treated <- MG_treatments == 1
+    #   n_matched_treated <- n_matched_treated + sum(MG_treated)
+    #   mean_control_outcome <- mean(MG_outcomes[MG_control]) # Avg control outcome in this MG
+    #   TTT <- TTT + sum(MG_outcomes[MG_treated]) - n_matched_treated * mean_control_outcome
+    # }
     # Remove matched_units
     data = data[!match_index,]
-    # message(paste("number of matched units =", sum(match_index)))
+    message(paste("number of matched units =", sum(match_index)))
 
   }
-
+  ATT <- TTT / n_matched_treated
   if (nrow(data) != 0) {
     return_df = rbind(return_df,data)
   }
@@ -477,7 +527,7 @@ FLAME_bit <- function(data, holdout, tradeoff = 0.1, compute_var = FALSE, PE_fun
   rownames(return_df) <- NULL
   return_df[,1:num_covs] <- mapply(function(x,y) factor_level[[x]][return_df[,y]], 1:num_covs, 1:num_covs)
   return_df$index <- 1:nrow(return_df)
-  return_list = list(covs_list, CATE, unlist(SCORE), return_df)
-  names(return_list) = c("covariate_list", "matched_group", "match_quality", "matched_data")
+  return_list = list(covs_list, CATE, unlist(SCORE), return_df, ATT)
+  names(return_list) = c("covariate_list", "matched_group", "match_quality", "matched_data", "ATT")
   return(return_list)
 }
