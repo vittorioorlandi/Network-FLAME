@@ -30,11 +30,18 @@ for (qs in c(1,2,3)) {
     val <- 1 
     qs <- 1
     print(val)
+    #A <-
+    #  read.csv(paste('./Data/Adjency/adj_andRelationships_vilno_',val,'.csv', sep = ""),
+    #           header = FALSE) %>%
+    #  as.matrix()
+
     A <-
-      read.csv(paste('./Data/Adjency/adj_andRelationships_vilno_',val,'.csv', sep = ""),
+      read.csv(paste('./Data/Adjency/adj_allVillageRelationships_vilno_',val,'.csv', sep = ""),
                header = FALSE) %>%
       as.matrix()
     
+      # 1  adj_allVillageRelationships_vilno_1
+
     #adj_allVillageRelationships_vilno_1
 
     demographics <- read.csv(paste('./Data/characteristics_',qs,'/village_',val,'.csv',sep =""))
@@ -70,12 +77,12 @@ for (qs in c(1,2,3)) {
     # G <- induced_subgraph(G, units_with_treatment_info)
 
     # Enumerates all possible subgraphs and puts into dataframe
-    all_subgraphs <- threshold_all_neighborhood_subgraphs(G, 3)
+    # all_subgraphs <- threshold_all_neighborhood_subgraphs(G, 3)
 
-    #all_subgraphs <- get_neighb_subgraphs(A)
+    all_subgraphs <- get_neighb_subgraphs(A, units_with_treatment_info, 3)
     all_features = gen_all_features(G, all_subgraphs)
     
-    dta = gen_data(all_features)
+    dta = gen_data(all_features[[1]])
 
 
     # Add covariate information
