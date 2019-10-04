@@ -75,18 +75,12 @@ interference_features <- list(c('kstar(2)', 'degree'),
                               c('degree', 'kstar(4)', '3-degree-neighb', 
                                 'betweenness', 'closeness', 'triangle', 'kstar(2)'))
 
-interference_params <- list(c(1, 1), 
-                            c(1, -1),
-                            c(-1, 1, 1, 1, 1, -1, 1), 
-                            c(1, 1, 1, 10, -5, 1, 1), 
-                            c(-5, 1, 1, 10, -5, 1, 10))
-
-interference_features <- c('triangle', 'degree')
-interference_params <- c(0, 5) 
-
-# interference_features <- 
-#   c('degree', '3-degree-neighb', 'betweenness', 'closeness')
-# interference_params <- c(1, 1, 1, 1)
+interference_features <- list(c('degree', 'kstar(4)', '3-degree-neighb', 
+                                'betweenness', 'closeness', 'triangle', 'kstar(2)'),
+                              c('degree', 'kstar(4)', '3-degree-neighb', 
+                                'betweenness', 'closeness', 'triangle', 'kstar(2)'))
+interference_params <- list(c(1, 1, 1, 10, -5, 1, 1), 
+                            c(0, 1, 1, 10, -5, 1, 10))
 
 require(Rcpp)
 require(RcppArmadillo)
@@ -94,9 +88,12 @@ require(igraph)
 require(magrittr)
 sourceCpp('subgraph_enumerate.cpp')
 
-simulate_network_matching(sim_type = 'ER', 
+out_all <- vector(mode = 'list', length = length(interference_params))
+for (i in 1:length(interference_params)) {
+  out_all[[i]] <- simulate_network_matching(sim_type = 'ER', 
                             n_sims = 50,
                             n_units = 50,
+                            n_treated = 25,
                             erdos_renyi_p = 0.07,
                             standardization_type = 'center',
                             interference_type = 'drop_untreated_edges',
@@ -107,13 +104,14 @@ simulate_network_matching(sim_type = 'ER',
                                            'naive', 
                                            'stratified', 
                                            'SANIA'),
-                            interference_features = interference_features,
-                            interference_parameters = interference_params,
+                            interference_features = interference_features[[i]],
+                            interference_parameters = interference_params[[i]],
                             coloring = TRUE, 
                             network_lik_weight = 0, 
                             iterate_FLAME = FALSE,
                             multiplicative = FALSE, 
-                            threshold = 10)
+                            threshold = 10)  
+}
 require(beepr)
 beep()
 

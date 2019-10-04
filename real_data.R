@@ -64,9 +64,9 @@ for (qs in c(1,2,3)) {
 
     # Gives graph
     G <- graph_from_adjacency_matrix(A, mode = 'undirected')
-    # G <- induced_subgraph(G, units_with_treatment_info)
 
     # Enumerates all possible subgraphs and puts into dataframe
+    ## Old method; avoid using if you can
     #all_subgraphs <- threshold_all_neighborhood_subgraphs(G, 3)
 
     all_subgraphs <- get_neighb_subgraphs(A)
