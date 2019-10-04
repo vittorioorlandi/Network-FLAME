@@ -60,16 +60,16 @@ void tester2(IntegerMatrix A) {
 Function my_combn("my_combn");
 
 // [[Rcpp::export]]
-List get_neighb_subgraphs(IntegerMatrix A, int threshold = 0) {
-  int n = A.nrow();
+List get_neighb_subgraphs(IntegerMatrix A, IntegerVector ids, int threshold = 0) {
+  int n = ids.length();
   if (threshold == 0) {
-    threshold = n; 
+    threshold = A.nrow(); 
   }
   List all_neighb_subgraphs (n);
   for (int i = 0; i < n; ++i) { // for all units
-    IntegerVector adj_row = A(_, i);
+    IntegerVector adj_row = A(_, ids(i) - 1);
     IntegerVector neighbors; 
-    for (int k = 0; k < n; ++k) {
+    for (int k = 0; k < A.nrow(); ++k) {
       if (adj_row[k] == 1) {
         neighbors.push_back(k + 1);
       }
@@ -230,7 +230,7 @@ A <- matrix(c(0, 0, 0, 0, 0,
               0, 1, 1, 0, 1,
               0, 1, 0, 1, 0),
             nrow = 5)
-out <- get_neighb_subgraphs(A)
+out <- get_neighb_subgraphs(A, c(1, 4))
 # G <- erdos.renyi.game(50, 0.08)
 # A <- get.adjacency(G, type = 'both', sparse = FALSE)
 # for (i in 1:5) {

@@ -12,6 +12,7 @@ my_combn <- function(x, m) {
   }
   return(combn(as.integer(x), m, simplify = FALSE))
 }
+
 sourceCpp('subgraph_enumerate.cpp')
 
 # all_dat <- load('application.RData')
@@ -25,14 +26,23 @@ outcome <- matrix(NA, nrow = 75, ncol = 3)
 
 for (qs in c(1,2,3)) {
   for (val in village_codes) {
-    
+
+    val <- 1 
     qs <- 1
-    val <- 1
     print(val)
+    #A <-
+    #  read.csv(paste('./Data/Adjency/adj_andRelationships_vilno_',val,'.csv', sep = ""),
+    #           header = FALSE) %>%
+    #  as.matrix()
+
     A <-
-      read.csv(paste('./Data/Adjency/adj_andRelationships_vilno_',val,'.csv', sep = ""),
+      read.csv(paste('./Data/Adjency/adj_allVillageRelationships_vilno_',val,'.csv', sep = ""),
                header = FALSE) %>%
       as.matrix()
+    
+      # 1  adj_allVillageRelationships_vilno_1
+
+    #adj_allVillageRelationships_vilno_1
 
     demographics <- read.csv(paste('./Data/characteristics_',qs,'/village_',val,'.csv',sep =""))
 
@@ -66,12 +76,10 @@ for (qs in c(1,2,3)) {
     G <- graph_from_adjacency_matrix(A, mode = 'undirected')
 
     # Enumerates all possible subgraphs and puts into dataframe
-    ## Old method; avoid using if you can
-    #all_subgraphs <- threshold_all_neighborhood_subgraphs(G, 3)
-
-    all_subgraphs <- get_neighb_subgraphs(A)
+    all_subgraphs <- get_neighb_subgraphs(A, units_with_treatment_info, 3)
     all_features = gen_all_features(G, all_subgraphs)
-    dta = gen_data(all_features)
+    
+    dta = gen_data(all_features[[1]])
 
 
     # Add covariate information
@@ -97,10 +105,10 @@ for (qs in c(1,2,3)) {
 
     # FLAME
     flame_out <- FLAME_bit(tmp, tmp, A = A, network_lik_weight = 0, iterate_FLAME = TRUE)
-    ATT_out <- flame_out$ATT
+    ATE_out <- ATE(flame_out)
     if (val == 1) {
       covs_list_out <- flame_out$covs_list
     }
-    outcome[val][qs] <- ATT_out
+    outcome[val][qs] <- ATE_out
   }
 }
