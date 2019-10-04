@@ -21,12 +21,16 @@ my_combn <- function(x, m) {
 # Navigate to where the RProject is
 #setwd('/Users/vittorioorlandi/Desktop/Network FLAME/Network-FLAME/')
 setwd("/Users/musaidawan/Dropbox/Duke/Projects/Data for Network paper/Network-FLAME/")
+village_codes <- setdiff(c(1:77), c(13,22))
+for (qs in c(1,2,3)) {
+for (val in village_codes ) {
+print(val)
 A <-
-  read.csv('./Data/Adjency/adj_allVillageRelationships_vilno_1.csv',
+  read.csv(paste('./Data/Adjency/adj_andRelationships_vilno_',val,'.csv', sep = ""),
            header = FALSE) %>%
   as.matrix()
 
-demographics <- read.csv('./Data/characteristics_1/village_1.csv')
+demographics <- read.csv(paste('./Data/characteristics_',qs,'/village_',val,'.csv',sep =""))
 
 units_with_treatment_info <- demographics$adjmatrix_key
 A <- A[units_with_treatment_info, units_with_treatment_info]
@@ -59,7 +63,7 @@ G <- graph_from_adjacency_matrix(A, mode = 'undirected')
 # G <- induced_subgraph(G, units_with_treatment_info)
 
 # Enumerates all possible subgraphs and puts into dataframe
-#all_subgraphs = threshold_all_neighborhood_subgraphs(G, 3)
+#all_subgraphs <- threshold_all_neighborhood_subgraphs(G, 3)
 all_subgraphs <- get_neighb_subgraphs(A, 5)
 
 all_features = gen_all_features(G, all_subgraphs)
@@ -83,12 +87,16 @@ dta$treated = factor(Z) # Z should be binary vector
 drop_these <- which(lapply(dta, function(x) length(unique(x))) == 1)
 tmp <- dta[, -drop_these]
 
-# cols with missing values:
-lapply(tmp, function(x) sum(is.na(x)) == 1)
+# cols with missing values: // should be no missing values, data pre-processing
+# lapply(tmp, function(x) sum(is.na(x)) == 1)
 
 # impute missing val by median, lower
-tmp$ration_color_2[is.na(tmp$ration_color_2)] <- as.factor(median(as.numeric(tmp$ration_color_2),na.rm = TRUE))
+#tmp$ration_color_2[is.na(tmp$ration_color_2)] <- as.factor(median(as.numeric(tmp$ration_color_2),na.rm = TRUE))
 
 # FLAME
 flame_out <- FLAME_bit(tmp, tmp, A = A, network_lik_weight = 0, iterate_FLAME = TRUE)
 ATE_out <- ATE(flame_out)
+}
+}
+
+
