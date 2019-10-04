@@ -22,7 +22,7 @@ sourceCpp('subgraph_enumerate.cpp')
 #setwd('/Users/vittorioorlandi/Desktop/Network FLAME/Network-FLAME/')
 setwd("/Users/musaidawan/Dropbox/Duke/Projects/Data for Network paper/Network-FLAME/")
 village_codes <- setdiff(c(1:77), c(13,22))
-outcome <- matrix(NA, nrow = 75, ncol = 3)
+net_flame_output <- matrix(NA, nrow = 75, ncol = 3)
 
 for (qs in c(1,2,3)) {
   for (val in village_codes) {
@@ -35,19 +35,46 @@ for (qs in c(1,2,3)) {
     #           header = FALSE) %>%
     #  as.matrix()
 
-    A <-
-      read.csv(paste('./Data/Adjency/adj_allVillageRelationships_vilno_',val,'.csv', sep = ""),
+    A1 <-
+      read.csv(paste('./Data/Adjency/adj_visitgo_vilno_',val,'.csv', sep = ""),
                header = FALSE) %>%
       as.matrix()
     
-      # 1  adj_allVillageRelationships_vilno_1
+    A2 <-
+      read.csv(paste('./Data/Adjency/adj_visitcome_vilno_',val,'.csv', sep = ""),
+               header = FALSE) %>%
+      as.matrix()
+    
+
+    A3 <-
+      read.csv(paste('./Data/Adjency/adj_rel_vilno_',val,'.csv', sep = ""),
+               header = FALSE) %>%
+      as.matrix()
+
+    A4 <-
+      read.csv(paste('./Data/Adjency/adj_nonrel_vilno_',val,'.csv', sep = ""),
+               header = FALSE) %>%
+      as.matrix()
+    
+        
+    #adj_visitgo_vilno_
+    #adj_visitcome_vilno_
+    #adj_rel_vilno_
+    #adj_nonrel_vilno_
+    
+    # union of three adjency matrix
+    A <- ((A1 + A2 + A3 + A4) > 1)*1  
+    print(paste('average degree is:',mean(rowSums(A))))
+    
+    #adj_giveadvice_vilno_
+    #adj_allVillageRelationships_vilno_
 
     #adj_allVillageRelationships_vilno_1
 
     demographics <- read.csv(paste('./Data/characteristics_',qs,'/village_',val,'.csv',sep =""))
 
     units_with_treatment_info <- demographics$adjmatrix_key
-    A <- A[units_with_treatment_info, units_with_treatment_info]
+    #A <- A[units_with_treatment_info, units_with_treatment_info]
     Y <- demographics$Y
     Z <- demographics$Z
     X <- demographics[, which(!colnames(demographics) %in% c('adjmatrix_key', 'Y', 'Z'))]
@@ -79,7 +106,7 @@ for (qs in c(1,2,3)) {
     # Enumerates all possible subgraphs and puts into dataframe
     # all_subgraphs <- threshold_all_neighborhood_subgraphs(G, 3)
 
-    all_subgraphs <- get_neighb_subgraphs(A, units_with_treatment_info, 3)
+    all_subgraphs <- get_neighb_subgraphs(A, units_with_treatment_info, 2)
     all_features = gen_all_features(G, all_subgraphs)
     
     dta = gen_data(all_features[[1]])
@@ -93,13 +120,14 @@ for (qs in c(1,2,3)) {
     dta = data.frame(sapply(dta, factor), stringsAsFactors = T)
 
     # Adds outcome and treatment
-    dta$outcome = Y # Y should be numeric
+    dta$outcome = as.numeric(Y) # Y should be numeric
     dta$treated = factor(Z) # Z should be binary vector
 
     # drop cols with no variation
     drop_these <- which(lapply(dta, function(x) length(unique(x))) == 1)
     tmp <- dta[, -drop_these]
-
+    # sapply(tmp, class)
+    
     # cols with missing values: // should be no missing values, data pre-processing
     # lapply(tmp, function(x) sum(is.na(x)) == 1)
 
@@ -112,6 +140,6 @@ for (qs in c(1,2,3)) {
     if (val == 1) {
       covs_list_out <- flame_out$covs_list
     }
-    outcome[val][qs] <- ATE_out
+    net_flame_output[val][qs] <- ATE_out
   }
 }
