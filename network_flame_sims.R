@@ -66,62 +66,41 @@ count_feature <- function(A, G, feature) {
   return(feature_counts)
 }
 
- threshold_list_subgraphs = function(V, k) {
-   if (k == 'max') {
-     k <- min(length(V), k)
-   }
-   else {###### I know this is stupid.
-     k <- min(length(V), k)
-   }
-   sgs = c()
-   for (j in 1:k) {
-     if (j == 1 && length(V) == 1) {
-       sgs = c(sgs, list(V)) # Can probably simplify
-     } else if (j <= length(V)) {
-       sgs = c(sgs, combn(V, j, simplify = FALSE))
-     }
-   }
-   sgs
- }
-
- threshold_all_neighborhood_subgraphs = function(G, k = 'max') {
-   # For each vertex i, generates sgs[[i]] which is all possible combinations of
-   # ≤ k vertices out of i's neighbors
-   # k <- sort(ego_size(G), decreasing = TRUE)[2]
-   sgs = list()
-   for (i in V(G)) {
-     # if (i %% 10 == 0) {print(i)}
-     neighbs <- neighbors(G, i)
-     if (length(neighbs) == 0)
-       sgs[[i]] = numeric(0)
-     else
-       sgs[[i]] = threshold_list_subgraphs(neighbs, k)
-   }
-   sgs
+threshold_list_subgraphs = function(V, k) {
+  if (k == 'max') {
+    k <- min(length(V), k)
+  }
+  else {
+    k <- min(length(V), k)
+  }
+  sgs = c()
+  for (j in 1:k) {
+    if (j == 1 && length(V) == 1) {
+      sgs = c(sgs, list(V)) # Can probably simplify
+    } else if (j <= length(V)) {
+      sgs = c(sgs, combn(V, j, simplify = FALSE))
+    }
+  }
+  # for (v in combn(V, k, simplify = FALSE)){
+  #   sgs = c(sgs, list.flatten(list_subgraphs(v)))
+  # }
+  sgs
 }
 
-gen_connected_sgs <- function(g, v_not_considered, sgs_so_far, neighbors, threshold) {
-  if (length(sgs_so_far) >= threshold) {
-    return(list(sgs_so_far))
-  }
-  if (length(sgs_so_far) == 0) {
-    candidates <- v_not_considered
-  }
-  else {
-    candidates <- intersect(v_not_considered, neighbors)
-  }
-  if (length(candidates) == 0) {
-    return(list(sgs_so_far))
-  } 
-  else {
-    v <- candidates[1]
-    v_not_considered <- setdiff(v_not_considered, v)
-    return(c(gen_connected_sgs(g, v_not_considered,
-                               sgs_so_far,
-                               neighbors, threshold),
-             gen_connected_sgs(g, v_not_considered, 
-                               union(sgs_so_far, v),
-                               union(neighbors, neighbors(g, v)), threshold)))
+threshold_all_neighborhood_subgraphs = function(G, k = 'max') {
+  # For each vertex i, generates sgs[[i]] which is all possible combinations of
+  # ≤ k vertices out of i's neighbors
+  # k <- sort(ego_size(G), decreasing = TRUE)[2]
+  sgs = list()
+  for (i in V(G)) {
+    if (i%%10 == 0) {
+      print(i)
+    }
+    neighbs <- neighbors(G, i)
+    if (length(neighbs) == 0)
+      sgs[[i]] = numeric(0)
+    else
+      sgs[[i]] = threshold_list_subgraphs(neighbs, k)
   }
 }
 
@@ -137,7 +116,7 @@ find_sg_type = function(G, sg, sg_types) {
   #   return(-1)
   # }
   # speeds things up, if possible, when not coloring
-  method <- ifelse(is.null(coloring), 'auto', 'vf2') 
+  method <- ifelse(is.null(coloring), 'auto', 'vf2')
   for (i in 1:length(sg_types)) {
     if (is_isomorphic_to(sG, sg_types[[i]], method = method))
       return(i)
@@ -175,12 +154,12 @@ gen_features = function(G, sgs, sg_types = list()) {
 gen_all_features = function(G, sgs) {
   sg_types = list()
   feats = list()
-  for (i in 1:length(sgs)) { # For each unit 
+  for (i in 1:length(sgs)) { # For each unit
     res = gen_features(G, sgs[[i]], sg_types)
     sg_types = res[[2]]
     feats[[i]] = res[[1]]
   }
-  return(list(feats = feats, 
+  return(list(feats = feats,
               types = sg_types))
 }
 
@@ -207,7 +186,7 @@ new_sg_counter <- function(g, threshold) {
   return(all_neighb_subgraphs)
 }
 
-ATE_est_error <- function(Y, f, estimator_type, G, A, ATE, Z, 
+ATE_est_error <- function(Y, f, estimator_type, G, A, ATE, Z,
                           feature_counts, network_lik_weight, treat_prob, iterate_FLAME, threshold) {
   # Takes in:
   #  The outcome vector Y
@@ -231,7 +210,7 @@ ATE_est_error <- function(Y, f, estimator_type, G, A, ATE, Z,
   } else if (estimator_type == 'all_eigenvectors') {
     error <- abs(all_eigs(A, Z, Y) - ATE)
   } else if (estimator_type == 'FLAME') {
-    
+
     # all_subgraphs <- threshold_all_neighborhood_subgraphs(G, threshold)
     all_subgraphs <- get_neighb_subgraphs(G, threshold)
     # all_subgraphs <- new_sg_counter(G, threshold)
@@ -245,7 +224,7 @@ ATE_est_error <- function(Y, f, estimator_type, G, A, ATE, Z,
     dta$outcome <- Y
     dta$treated <- factor(Z)
     # browser()
-    flame_out <- FLAME_bit(dta, dta, A = A, 
+    flame_out <- FLAME_bit(dta, dta, A = A,
                            network_lik_weight = network_lik_weight, iterate_FLAME = iterate_FLAME)
     error <- abs(ATE(flame_out) - ATE)
   } else if (estimator_type == 'FLAM') { #ignore me
@@ -302,11 +281,11 @@ simulate_network_matching <- function(sim_type = 'ER',
                                       interference_parameters = NULL,
                                       matching_features = c(),
                                       estimators,
-                                      network_lik_weight = 1, 
-                                      coloring = TRUE, 
-                                      n_blocks = 5, 
-                                      iterate_FLAME = FALSE, 
-                                      multiplicative = FALSE, 
+                                      network_lik_weight = 1,
+                                      coloring = TRUE,
+                                      n_blocks = 5,
+                                      iterate_FLAME = FALSE,
+                                      multiplicative = FALSE,
                                       threshold) {
 
   # interference_features are the features that should be used to construct
@@ -339,17 +318,17 @@ simulate_network_matching <- function(sim_type = 'ER',
 
   if (sim_type == 'SBM') {
     interference_parameters %<>%
-      lapply(function(x) runif(n_blocks, x[1], x[2])) %>% 
-      unlist() %>% 
-      rep(each = n_units / n_blocks) %>% 
+      lapply(function(x) runif(n_blocks, x[1], x[2])) %>%
+      unlist() %>%
+      rep(each = n_units / n_blocks) %>%
       matrix(nrow = n_units)
   }
-  pmat = Matrix(runif(n_blocks ^ 2, 0, 0.1), 
-                nrow = n_blocks, 
+  pmat = Matrix(runif(n_blocks ^ 2, 0, 0.1),
+                nrow = n_blocks,
                 ncol = n_blocks)
   pmat = forceSymmetric(pmat)
   bsizes = rep(n_units / n_blocks, n_blocks)
-  
+
   for (sim in 1:n_sims) {
 
     # Generate an undirected Erdos-Renyi or SBM graph
@@ -368,7 +347,7 @@ simulate_network_matching <- function(sim_type = 'ER',
     # Randomly assign treatment to n_treated units
     # Z <- rep(0, n_units)
     # Z[sample(1:n_units, n_treated)] = 1
-    
+
     # Assign treatment randomly with probability treat_prob
     Z <- sample(c(0, 1), size = n_units, replace = TRUE, prob = c(1 - treat_prob, treat_prob))
     n_treated <- sum(Z)
@@ -376,13 +355,13 @@ simulate_network_matching <- function(sim_type = 'ER',
     if (coloring) {
       G <- set_vertex_attr(G, 'color', value = Z)
     }
-    
+
     # Get the graph adjacency matrix
     A <- get.adjacency(G, type= 'both', sparse = FALSE)
-    
+
     feature_counts <- matrix(0, nrow = n_units, ncol = n_features)
     colnames(feature_counts) <- all_features
-    
+
     if (interference_type == 'drop_mutual_untreated_edges') {
       AZ <- A
       untreated <- which(Z == 0)
@@ -405,7 +384,7 @@ simulate_network_matching <- function(sim_type = 'ER',
       feature_counts[, i] <- count_feature(AZ, GZ, all_features[i])
     }
     std_feature_counts <- apply(feature_counts, 2, standardize, standardization_type)
-# check MARGIN!! 
+# check MARGIN!!
     if (sim_type == 'ER') {
       f <- sweep(std_feature_counts[, interference_features],
                  MARGIN = 2,
@@ -414,7 +393,7 @@ simulate_network_matching <- function(sim_type = 'ER',
     } else {
       f <- std_feature_counts[, interference_features] * interference_parameters
     }
-    
+
     # f <- rowSums(f) + 7 * ATE
     # ff <- rowSums(f)
     f <- rowSums(f)
@@ -429,7 +408,7 @@ simulate_network_matching <- function(sim_type = 'ER',
 
     for (j in 1:length(estimators)) {
       abs_error[sim, j] <-
-        ATE_est_error(Y, f, estimators[j], G, A, ATE, Z, 
+        ATE_est_error(Y, f, estimators[j], G, A, ATE, Z,
                       feature_counts, network_lik_weight, treat_prob, iterate_FLAME, threshold)
     }
   }
@@ -451,44 +430,44 @@ simulate_network_matching <- function(sim_type = 'ER',
 #
 
 # interference_features <- list(c('kstar(2)', 'degree'),
-#                               c('degree', 'kstar(4)', '3-degree-neighb', 
+#                               c('degree', 'kstar(4)', '3-degree-neighb',
 #                                 'betweenness', 'closeness', 'triangle', 'kstar(2)'),
-#                               c('degree', 'kstar(4)', '3-degree-neighb', 
+#                               c('degree', 'kstar(4)', '3-degree-neighb',
 #                                 'betweenness', 'closeness', 'triangle', 'kstar(2)'))
-# 
-# interference_params <- list(c(10, 10), 
-#                             c(1, 1, 1, 1, 1, 1, 1), 
+#
+# interference_params <- list(c(10, 10),
+#                             c(1, 1, 1, 1, 1, 1, 1),
 #                             c(1, 1, 1, 10, 5, 1, 1))
 # interference_params <- interference_params[[1]]
 # interference_features <- interference_features[[1]]
-# 
+#
 # # ## TEST 4
 # # interference_params <- list(c(0, 1), c(0, 1), c(0, 1), c(0, 1), c(0, 1), c(0, 1), c(0, 1))
-# # 
+# #
 # # ## TEST 5
 # # interference_params <- list(c(5, 10), c(0, 1), c(0, 1), c(0, 1), c(0, 1), c(5, 10), c(5, 10))
-# # 
+# #
 # # ## TEST 6
 # # interference_params <- list(c(0, 1), c(0, 1), c(0, 1), c(5, 10), c(5, 10), c(0, 1), c(0, 1))
 # er_p <- c(.05, .07, .1)
 # interference_features <- list(c('kstar(2)', 'degree'),
 #                               c('kstar(2)', 'degree'),
-#                               c('degree', 'kstar(4)', '3-degree-neighb', 
+#                               c('degree', 'kstar(4)', '3-degree-neighb',
 #                                 'betweenness', 'closeness', 'triangle', 'kstar(2)'),
-#                               c('degree', 'kstar(4)', '3-degree-neighb', 
+#                               c('degree', 'kstar(4)', '3-degree-neighb',
 #                                 'betweenness', 'closeness', 'triangle', 'kstar(2)'),
-#                               c('degree', 'kstar(4)', '3-degree-neighb', 
+#                               c('degree', 'kstar(4)', '3-degree-neighb',
 #                                 'betweenness', 'closeness', 'triangle', 'kstar(2)'))
-# 
-# interference_params <- list(c(1, 1), 
+#
+# interference_params <- list(c(1, 1),
 #                             c(1, -1),
-#                             c(-1, 1, 1, 1, 1, -1, 1), 
-#                             c(1, 1, 1, 10, -5, 1, 1), 
+#                             c(-1, 1, 1, 1, 1, -1, 1),
+#                             c(1, 1, 1, 10, -5, 1, 1),
 #                             c(-5, 1, 1, 10, -5, 1, 10))
-# 
+#
 # for (i in seq_along(er_p)) {
 #   for (j in seq_along(interference_features)) {
-#     simulate_network_matching(sim_type = 'ER', 
+#     simulate_network_matching(sim_type = 'ER',
 #                               n_sims = 50,
 #                               n_units = 50,
 #                               erdos_renyi_p = er_p[i],
@@ -498,16 +477,15 @@ simulate_network_matching <- function(sim_type = 'ER',
 #                                              'first_eigenvector',
 #                                              'all_eigenvectors',
 #                                              'FLAME',
-#                                              'naive', 
-#                                              'stratified', 
+#                                              'naive',
+#                                              'stratified',
 #                                              'SANIA'),
 #                               interference_features = interference_features[[j]],
 #                               interference_parameters = interference_params[[j]],
-#                               coloring = FALSE, 
+#                               coloring = FALSE,
 #                               network_lik_weight = 0,)
 #   }
 # }
-# 
+#
 # require(beepr)
 # beep()
-

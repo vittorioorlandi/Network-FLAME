@@ -182,7 +182,8 @@ GLMNET_PE_bit <- function(holdout_trt, holdout_ctl, lambda, alpha) {
 match_quality_bit <- function(c, data, holdout, num_covs, cur_covs, covs_max_list, tradeoff,
                               PE_function, model, ridge_reg, lasso_reg, compute_var,
                               A = NULL, network_lik_weight = 0) {
-
+  
+  
   # browser()
   # temporarily remove covariate c
   covs_to_match = cur_covs[cur_covs != c]
