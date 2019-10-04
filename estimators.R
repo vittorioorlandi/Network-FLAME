@@ -30,7 +30,6 @@ all_eigs <- function(A, Z, Y) {
   return(total_treatment_effect / n)
 }
 
-
 # First Eigenvector -------------------------------------------------------
 first_eig <- function(A, Z, Y) {
   n <- length(Z)
