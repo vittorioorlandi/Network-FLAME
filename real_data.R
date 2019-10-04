@@ -22,6 +22,8 @@ my_combn <- function(x, m) {
 #setwd('/Users/vittorioorlandi/Desktop/Network FLAME/Network-FLAME/')
 setwd("/Users/musaidawan/Dropbox/Duke/Projects/Data for Network paper/Network-FLAME/")
 village_codes <- setdiff(c(1:77), c(13,22))
+outcome <- matrix(NA, nrow = 75, ncol = 3)
+
 for (qs in c(1,2,3)) {
 for (val in village_codes ) {
 print(val)
@@ -96,6 +98,7 @@ tmp <- dta[, -drop_these]
 # FLAME
 flame_out <- FLAME_bit(tmp, tmp, A = A, network_lik_weight = 0, iterate_FLAME = TRUE)
 ATE_out <- ATE(flame_out)
+outcome[val][qs] <- 0
 }
 }
 
