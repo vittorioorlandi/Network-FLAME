@@ -68,14 +68,13 @@
 set.seed(42069)
 setwd('~/Dropbox/Duke/projects/learning_interference/Network-FLAME/')
 source('network_flame_sims.R')
+#require(plyr)
+require(ggplot2)
+require(reshape2)
 
-sim_name = 'sparse_ER'
-interference_features <- c('degree', 'kstar(3)', '3-degree-neighb', 
-                            'betweenness', 'closeness', 'triangle', 'kstar(2)')
-interference_params <- list(c(1, 4, 1, 10, -5, 1, -4),
-                            c(0, 4, 1, 10, -5, 1, -4),
-                            c(0, 0, 0, 0, 0, 10, 0),
-                            c(0, 0, 0, 5, 5, 0, 0))
+sim_name = 'ER(50, 0.1)_degree_betweenness_triangle_multiplicative'
+interference_features <- c('degree', 'betweenness', 'triangle')
+interference_params <- list(c(1, 1, 1), c(2, 1, 1), c(1, 2, 1), c(1, 1, 2))
 out_all <- vector(mode = 'list', length = length(interference_params))
 settings = list(sim_type = 'ER', 
                 n_sims = 50,
@@ -83,51 +82,151 @@ settings = list(sim_type = 'ER',
                 n_treated = 25,
                 erdos_renyi_p = 0.1,
                 standardization_type = 'center',
-                interference_type = 'drop_untreated_edges',
+                interference_type = 'drop_mutual_untreated_edges',
                 estimators = c('true',
                                'first_eigenvector',
                                'all_eigenvectors',
-                               'FLAME',
                                'naive', 
+                               'FLAME',
                                'stratified', 
                                'SANIA'),
                 interference_features = interference_features,
                 coloring = TRUE, 
                 network_lik_weight = 0.5, 
                 iterate_FLAME = TRUE,
-                multiplicative = FALSE, 
-                threshold = 5)
+                multiplicative = TRUE, 
+                threshold = 2)
 for (i in 1:length(interference_params)) {
   print(paste('Setting', i, 'of', length(interference_params)))
   out_all[[i]] <- list(settings)
   out_all[[i]]$results <- do.call(simulate_network_matching, 
-                                  c(list(interference_parameters=interference_params[[i]]), settings))
+                                  c(list(interference_parameters=interference_params[[i]]), 
+                                    settings))
 }
 save(out_all, file=paste(sim_name, '.RData', sep=""))
 require(beepr)
 beep()
 
-require(ggplot2)
-require(reshape2)
 ggdata = NULL
 for (i in 1:length(interference_params)){
   ggdata = rbind(ggdata, data.frame(as.data.frame(out_all[[i]]$results), setting=i))
 }
 
 ggdata = melt(ggdata, id.vars = 'setting')
-levels(ggdata$variable) = c('True', 'First Eigenvector', 'All Eigenvectors', 'FLAME', 'Naive', 'Stratified', 'SANIA')
-repmeans = rep(tapply(ggdata$value, ggdata$variable, mean), each=50 * length(interference_params))
-
+levels(ggdata$variable) = c('True', 'First Eigenvector', 'All Eigenvectors',
+                            'Naive',  'FLAME',  'Stratified', 'SANIA')
+means = ddply(ggdata, .(setting, variable), summarise, value=mean(value))
+for(k in 1:length(interference_params)){
+  means[means$setting==k, 'leq'] = (means[means$setting==k, 'value'] <=  
+                                    means[means$setting==k & means$variable=='FLAME', 'value'])
+}
+repcol = rep(means[order(means$variable), 'leq'], each=50)
 ggplot(ggdata, aes(x=variable, y=value)) + 
-  geom_violin(aes(fill=repmeans), draw_quantiles = 0.5 ) + 
-  scale_color_gradient(low = "#21A56C", high = "#FF4F4F",
-                       space = "Lab", na.value = "grey50",
-                       aesthetics = "fill") + 
+  geom_violin(aes(fill=repcol), draw_quantiles = 0.5 ) + 
+  geom_hline(data = data.frame(y = tapply(ggdata[ggdata$variable=='FLAME', 'value'], 
+                                          ggdata[ggdata$variable=='FLAME', 'setting'], mean), 
+                               setting=1:length(interference_params)), 
+             aes(yintercept=y), linetype=2) + 
+  scale_fill_brewer(palette = 'Set1') + 
   xlab('') + ylab('Mean Absolute Error') + 
-  ggtitle('Simulation Results: Dense Graph') + 
+  ggtitle('Simulation Results: interference is weighted PRODUCT of counts instead of SUM') + 
   facet_grid(setting ~., scales = 'free_y') +
   theme_bw() + theme(legend.position='None', plot.title = element_text(hjust = 0.5), 
                      text = element_text(color='black', size=16)) 
+ggsave(paste(sim_name, '.png', sep=''), width=10, height=8, units = 'in', device = 'png', dpi=300)
+
+##################################################################################################
+# Additive Interference
+##################################################################################################
+sim_name = 'ER(50, 0.1)_like_presentation'
+# interference_features <- list(c('degree', 'triangle'), 
+#                               c('degree', 'triangle'), 
+#                               c('degree', 'triangle', 'kstar(2)', 'kstar(4)', 
+#                                 '3-degree-neighb', 'betweenness', 'closeness'),
+#                               c('triangle', 'kstar(2)', 'kstar(4)', 
+#                                 '3-degree-neighb', 'betweenness', 'closeness'))
+# interference_params <- list(c(0, 10), 
+#                             c(10, 10), 
+#                             c(-5, 1, 10, 1, 1, 0, -1), 
+#                             c(1, 10, 1, 1, 0, -1))
+interference_features <- list(c('degree', 'triangle', 'kstar(2)', 'kstar(4)',
+                                '3-degree-neighb', 'betweenness', 'closeness'),
+                              c('triangle', 'kstar(2)', 'kstar(4)',
+                                '3-degree-neighb', 'betweenness', 'closeness'))
+interference_params <- list(c(-5, 1, 10, 1, 1, 0, -1),
+                            c(1, 10, 1, 1, 0, -1))
+out_all <- vector(mode = 'list', length = length(interference_params))
+settings = list(sim_type = 'ER', 
+                n_sims = 50,
+                n_units = 50,
+                n_treated = 25,
+                erdos_renyi_p = 0.1,
+                standardization_type = 'center',
+                interference_type = 'drop_mutual_untreated_edges',
+                estimators = c('true',
+                               'first_eigenvector',
+                               'all_eigenvectors',
+                               'naive', 
+                               'FLAME',
+                               'stratified', 
+                               'SANIA'),
+                coloring = TRUE, 
+                network_lik_weight = 0.5, 
+                iterate_FLAME = FALSE,
+                multiplicative = FALSE, 
+                threshold = 5)
+for (i in 1:length(interference_params)) {
+  print(paste('Setting', i, 'of', length(interference_params)))
+  out_all[[i]] <- list(settings)
+  out_all[[i]]$results <- do.call(simulate_network_matching, 
+                                  c(list(
+                                    interference_features = interference_features[[i]],
+                                    interference_parameters = interference_params[[i]]), 
+                                    settings))
+}
+save(out_all, file=paste(sim_name, '.RData', sep=""))
+require(beepr)
+beep()
+
+
+
+#### Plotting code
+ggdata = NULL
+for (i in 1:length(interference_params)){
+  ggdata = rbind(ggdata, data.frame(as.data.frame(out_all[[i]]$results), setting=i))
+}
+
+ggdata = melt(ggdata, id.vars = 'setting')
+levels(ggdata$variable) = c('True', 'First Eigenvector', 'All Eigenvectors',
+                            'Naive',  'FLAME',  'Stratified', 'SANIA')
+#this is for coloring
+leq = rep(NA, length(interference_params) * 7)
+i = 1
+for(m in 1:7){
+  for(k in 1:length(interference_params)){
+    means = tapply(ggdata[ggdata$setting==k, 'value'], 
+                   ggdata[ggdata$setting==k, 'variable'], mean)
+    leq[i] = (means[m] <= means['FLAME'])
+    i = 1 + i
+  }
+}
+repcol = rep(leq, each=50)
+ggplot(ggdata, aes(x=variable, y=value)) + 
+  geom_violin(aes(fill=repcol), draw_quantiles = 0.5 ) + 
+  geom_hline(data = data.frame(y = tapply(ggdata[ggdata$variable=='FLAME', 'value'], 
+                                          ggdata[ggdata$variable=='FLAME', 'setting'], mean), 
+                               setting=1:length(interference_params)), 
+             aes(yintercept=y), linetype=2) + 
+  scale_fill_brewer(palette = 'Set1') + 
+  xlab('') + ylab('Mean Absolute Error') + 
+  ggtitle('Simulation Results: Additive Interference') + 
+  facet_grid(setting ~., scales = 'free_y') +
+  theme_bw() + theme(legend.position='None', plot.title = element_text(hjust = 0.5), 
+                     text = element_text(color='black', size=16)) 
+
+ggsave(paste(sim_name, '.png', sep=''), width=10, height=8, units = 'in', device = 'png', dpi=300)
+
+##################################################################################################
 
 
 sim_name = 'ER(100, 0,05)_degree_triangle'
@@ -193,8 +292,6 @@ ggplot(ggdata, aes(x=setting, y=mean, color=method, fill=method, ymin=lo, ymax=h
                      text = element_text(color='black', size=16), 
                      legend.position = c(0.9,0.9), 
                      legend.background = element_rect(colour = 'black')) 
-
-
 
 
 
