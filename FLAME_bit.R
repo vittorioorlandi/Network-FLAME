@@ -40,7 +40,7 @@ aggregate_table <- function(list) {
 update_matched_bit <- function(data, cur_covs, covs_max_list, compute_var) {
 
   # browser()
-  ## Tentatively going to say the following: 
+  ## Tentatively going to say the following:
   # p <- ncol(data)
   # data_wo_t <- as.bigz(as.matrix(data[, 1:(p - 3)])) # -1 for outcome, -1 for matched, -1 for treatment
   data_wo_t <- as.bigz(as.matrix(data[, cur_covs+1])) # the covariates values as a matrix
@@ -185,8 +185,8 @@ GLMNET_PE_bit <- function(holdout_trt, holdout_ctl, lambda, alpha) {
 match_quality_bit <- function(c, data, holdout, num_covs, cur_covs, covs_max_list, tradeoff,
                               PE_function, model, ridge_reg, lasso_reg, compute_var,
                               A = NULL, network_lik_weight = 0) {
-  
-  
+
+
   # browser()
   # temporarily remove covariate c
   covs_to_match = cur_covs[cur_covs != c]
@@ -211,7 +211,7 @@ match_quality_bit <- function(c, data, holdout, num_covs, cur_covs, covs_max_lis
   holdout_ctl <- holdout[holdout[,'treated'] == '0',-(c+1)]
   holdout_ctl <- holdout_ctl[,!(names(holdout_ctl) %in% 'treated')]
 
-  ## Eliminate 0-variance predictors. Sloppy, need to fix. 
+  ## Eliminate 0-variance predictors. Sloppy, need to fix.
   # all_same <- which(sapply(holdout_ctl, function(x) length(unique(x)) == 1))
   # if (length(all_same) > 0) {
   #   holdout_ctl <- holdout_ctl[, -all_same]
@@ -220,7 +220,7 @@ match_quality_bit <- function(c, data, holdout, num_covs, cur_covs, covs_max_lis
   # if (length(all_same) > 0) {
   #   holdout_trt <- holdout_trt[, -all_same]
   # }
-  
+
   if (is.null(PE_function)) {
 
     # default PE - ridge regression with 0.1 regularization parameter
@@ -330,9 +330,9 @@ FLAME_bit <- function(data, holdout, tradeoff = 0.1, compute_var = FALSE, PE_fun
   require(gmp)
   require(glmnet)
   require(dplyr)
-  
+
   num_covs <- ncol(data) - 2 # ignore treatment and outcome
-  
+
   # Stop if covariates are not factors
   if (Reduce("|", sapply(1:num_covs, function(x) !is.factor(data[,x] ))) |
       Reduce("|", sapply(1:num_covs, function(x) !is.factor(holdout[,x] )))) {
@@ -348,7 +348,7 @@ FLAME_bit <- function(data, holdout, tradeoff = 0.1, compute_var = FALSE, PE_fun
   if (!is.numeric(data[,num_covs + 1]) | !is.numeric(holdout[,num_covs + 1])) {
     stop("Outcome variable is not numeric data type")
   }
-  
+
   tmp <- data
   data <- drop_unmatchable(data)$data
   holdout <- drop_unmatchable(holdout)$data
@@ -383,7 +383,7 @@ FLAME_bit <- function(data, holdout, tradeoff = 0.1, compute_var = FALSE, PE_fun
   SCORE <- list()
   matched_groups <- list()
   n_matched_groups <- 0
-  TTT <- 0 # Running count of total treatment effect on the treated 
+  TTT <- 0 # Running count of total treatment effect on the treated
   n_matched_treated <- 0 # Running count of number of matched units that are treated
 
   # Initialize the current covariates to be all covariates and set level to 1
@@ -401,13 +401,13 @@ FLAME_bit <- function(data, holdout, tradeoff = 0.1, compute_var = FALSE, PE_fun
   return_match <- update_matched_bit(data, cur_covs, covs_max_list, compute_var)
   match_index <- return_match[[1]]
   index <- return_match[[2]]
-  
+
   ## For ATE computation
   # if (sum(match_index) > 0) {
   #   matched_inds <- which(match_index)
   #   for (i in seq_along(unique(index))) {
   #     MG <- matched_inds[which(index == index[i])]
-  #     MG_outcomes <- data$outcome[MG] 
+  #     MG_outcomes <- data$outcome[MG]
   #     MG_treatments <- data$treated[MG]
   #     MG_control <- MG_treatments == 0
   #     MG_treated <- MG_treatments == 1
@@ -428,7 +428,7 @@ FLAME_bit <- function(data, holdout, tradeoff = 0.1, compute_var = FALSE, PE_fun
   # message(paste("number of matched units =", sum(match_index)))
   # if (sum(match_index) > 0) {
   #   MG_units <- which(match_index) # Units matched this iteration
-  #   MG_outcomes <- data$outcome[MG_units] 
+  #   MG_outcomes <- data$outcome[MG_units]
   #   MG_treatments <- data$treated[MG_units]
   #   MG_control <- MG_treatments == 0
   #   MG_treated <- MG_treatments == 1
@@ -449,15 +449,15 @@ FLAME_bit <- function(data, holdout, tradeoff = 0.1, compute_var = FALSE, PE_fun
          (sum(data[,'treated'] == 0) > 0) &&
          (sum(data[,'treated'] == 1) > 0)) {
 
-    # unm_data <- drop_unmatchable(data)$unmatchable
-    # unm_hld <- drop_unmatchable(holdout)$unmatchable
-    # unmatchable <- union(unm_data, unm_hld)
-    # if (!is.null(unmatchable)){
-    #   data <- data[, -unmatchable]
-    #   holdout <- holdout[, -unmatchable]
-    #   cur_covs <- cur_covs[-unmatchable]
-    #   covs_max_list <- covs_max_list[-unmatchable]
-    # }
+    #unm_data <- drop_unmatchable(data)$unmatchable
+    #unm_hld <- drop_unmatchable(holdout)$unmatchable
+    #unmatchable <- union(unm_data, unm_hld)
+    #if (!is.null(unmatchable)){
+    #  data <- data[, -unmatchable]
+    #  holdout <- holdout[, -unmatchable]
+    #  cur_covs <- cur_covs[-unmatchable]
+    #  covs_max_list <- covs_max_list[-unmatchable]
+    #}
     # print('Data variance')
     # print(apply(data, 2, function(j) c(var(j), var(j[data$treated==1]), var(j[data$treated==0]))))
     # print('Holdout variance')
@@ -492,17 +492,17 @@ FLAME_bit <- function(data, holdout, tradeoff = 0.1, compute_var = FALSE, PE_fun
     covs_list[[level]] <- column[(cur_covs + 1)]
 
     # Update Match
-    
+
     return_match = update_matched_bit(data, cur_covs, covs_max_list, compute_var)
     match_index = return_match[[1]]
     index = return_match[[2]]
-    
+
     ## For ATE computation
     # if (sum(match_index) > 0) {
     #   matched_inds <- which(match_index)
     #   for (i in seq_along(unique(index))) {
     #     MG <- matched_inds[which(index == index[i])]
-    #     MG_outcomes <- data$outcome[MG] 
+    #     MG_outcomes <- data$outcome[MG]
     #     MG_treatments <- data$treated[MG]
     #     MG_control <- MG_treatments == 0
     #     MG_treated <- MG_treatments == 1
@@ -519,7 +519,7 @@ FLAME_bit <- function(data, holdout, tradeoff = 0.1, compute_var = FALSE, PE_fun
 
     # if (sum(match_index) > 0) { # Have a new matched group
     #   MG_units <- which(match_index) # Units matched this iteration
-    #   MG_outcomes <- data$outcome[MG_units] 
+    #   MG_outcomes <- data$outcome[MG_units]
     #   MG_treatments <- data$treated[MG_units]
     #   MG_control <- MG_treatments == 0
     #   MG_treated <- MG_treatments == 1
