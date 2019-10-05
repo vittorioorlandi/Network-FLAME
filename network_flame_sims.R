@@ -3,6 +3,19 @@ require(igraph)
 require(dplyr)
 require(magrittr)
 require(stringr)
+require(Rcpp)
+require(RcppArmadillo)
+require(gmp)
+my_combn <- function(x, m) {
+  if (length(x) == 1) {
+    return(list(x))
+  }
+  return(utils::combn(as.integer(x), m, simplify = FALSE))
+}
+source('estimators.R')
+source('FLAME_bit.R')
+source('ATE.R')
+sourceCpp('subgraph_enumerate.cpp')
 
 standardize <- function(x, type = '0-1', limits = c(0, 1)) {
   if (type == 'center') {
@@ -113,8 +126,7 @@ find_sg_type = function(G, sg, sg_types) {
   sG = induced_subgraph(G, sg)
   coloring <- vertex_attr(sG, 'color')
   # There's at least one untreated individual
-  # Should be able to comment this out bc only looking at treated graph.......
-  if (!is.null(coloring) & sum(coloring) < length(V(sG))) { 
+  if (!is.null(coloring) & sum(coloring) < length(V(sG))) {
     return(-1)
   }
   # speeds things up, if possible, when not coloring
@@ -226,6 +238,8 @@ ATE_est_error <- function(Y, f, estimator_type, G, A, ATE, Z,
     dta$treated <- factor(Z)
     flame_out <- FLAME_bit(dta, dta, A = A,
                            network_lik_weight = network_lik_weight, iterate_FLAME = iterate_FLAME)
+    #print(paste('Matched=', sum(flame_out$matched_data$matched)))
+    #print(paste('ATE=', ATE(flame_out)))
     error <- abs(ATE(flame_out) - ATE)
   } else if (estimator_type == 'degree_dist') {
     X <- count_degree(G)
@@ -295,9 +309,15 @@ simulate_network_matching <- function(sim_type = 'ER',
       pmat = forceSymmetric(pmat)
       bsizes = rep(n_units / n_blocks, n_blocks)
   }
- 
+  t0 = proc.time()[3]
+  tot_time = 0
   for (sim in 1:n_sims) {
-
+    t1 = proc.time()[3] - t0
+    t0 = proc.time()[3]
+    tot_time = tot_time + t1
+    print(paste('Simulation', sim, 'of', n_sims, "last one took", round(t1, 1), 'seconds.', 
+                'ETA:', round((tot_time/sim) * (n_sims - sim), 1), 'seconds.'))
+    
     # Generate an undirected Erdos-Renyi or SBM graph
     if (sim_type == 'ER') {
       G <- erdos.renyi.game(n_units, erdos_renyi_p, directed = FALSE)
@@ -379,11 +399,13 @@ simulate_network_matching <- function(sim_type = 'ER',
 
     for (j in 1:length(estimators)) {
       abs_error[sim, j] <-
-        ATE_est_error(Y, f, estimators[j], GZ, AZ, ATE, Z,
+        ATE_est_error(Y, f, estimators[j], G, A, ATE, Z,
                       feature_counts, network_lik_weight, treat_prob, iterate_FLAME, threshold)
     }
+    print('Error:')
+    print(abs_error[sim, ])
   }
-
+  print(paste('Done, total time elapsed:', round(tot_time, 1)))
   mean_abs_error <- colMeans(abs_error)
   sd_abs_error <- apply(abs_error, 2, sd)
 

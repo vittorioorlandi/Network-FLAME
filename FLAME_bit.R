@@ -159,6 +159,8 @@ GLMNET_PE_bit <- function(holdout_trt, holdout_ctl, lambda, alpha) {
   # MSE for treated
   y <- holdout_trt$outcome
   x <- model.matrix(~ .-1, holdout_trt[,-which(colnames(holdout_trt) == "outcome")])
+  #print(apply(x, 2, function(j) sum(j != 0) ))
+  #x <- x[, apply(x, 2, var, na.rm=TRUE) > 0]
   fit <- glmnet(x, y, alpha = alpha, lambda = lambda)
   predicted_value <- predict(fit, x, s = lambda)
   MSE_treated <- mean((y - predicted_value)^2) # compute mean squared error
@@ -166,6 +168,7 @@ GLMNET_PE_bit <- function(holdout_trt, holdout_ctl, lambda, alpha) {
   # MSE for control
   y <- holdout_ctl$outcome
   x <- model.matrix(~ .-1, holdout_ctl[,-which(colnames(holdout_ctl) == "outcome")])
+  #x <- x[, apply(x, 2, var, na.rm=TRUE) > 0]
   fit <- glmnet(x, y, alpha = alpha, lambda = lambda)
   predicted_value <- predict(fit, x, s = lambda)
   MSE_control <- mean((y - predicted_value)^2) # compute mean squared error
@@ -348,19 +351,17 @@ FLAME_bit <- function(data, holdout, tradeoff = 0.1, compute_var = FALSE, PE_fun
   
   tmp <- data
   data <- drop_unmatchable(data)$data
+  holdout <- drop_unmatchable(holdout)$data
   num_covs <- ncol(data) - 2 # ignore treatment and outcome
-  print(num_covs)
 
   factor_level <- lapply(data[, 1:num_covs], levels)  # Levels of each factor
   covs_max_list <- sapply(factor_level, length) # Number of levels of each covariate
-
   # Sort in increasing order of number of levels
   covs_max_list <- covs_max_list[order(covs_max_list)]
   factor_level <- factor_level[names(covs_max_list)]
 
   data[, c(1:num_covs)] <- data[,names(covs_max_list)]
   colnames(data) <- c(names(covs_max_list), "outcome", "treated")
-
   holdout[, c(1:num_covs)] <- holdout[,names(covs_max_list)]
   colnames(holdout) <- c(names(covs_max_list), "outcome", "treated")
 
@@ -448,17 +449,24 @@ FLAME_bit <- function(data, holdout, tradeoff = 0.1, compute_var = FALSE, PE_fun
          (sum(data[,'treated'] == 0) > 0) &&
          (sum(data[,'treated'] == 1) > 0)) {
 
-    # tmp <- drop_unmatchable(data)
-    # data <- tmp$data
-    # unmatchable <- tmp$unmatchable
-    # cur_covs <- cur_covs[-unmatchable]
-    # covs_max_list <- covs_max_list[-unmatchable]
+    # unm_data <- drop_unmatchable(data)$unmatchable
+    # unm_hld <- drop_unmatchable(holdout)$unmatchable
+    # unmatchable <- union(unm_data, unm_hld)
+    # if (!is.null(unmatchable)){
+    #   data <- data[, -unmatchable]
+    #   holdout <- holdout[, -unmatchable]
+    #   cur_covs <- cur_covs[-unmatchable]
+    #   covs_max_list <- covs_max_list[-unmatchable]
+    # }
+    # print('Data variance')
+    # print(apply(data, 2, function(j) c(var(j), var(j[data$treated==1]), var(j[data$treated==0]))))
+    # print('Holdout variance')
+    # print(apply(holdout, 2, function(j) c(var(j), var(j[holdout$treated==1]), var(j[holdout$treated==0]))))
     # browser()
     level = level + 1
 
     #Temporarily drop one covariate at a time to calculate Match Quality
     #Drop the covariate that returns highest Match Quality Score
-    
     list_score <- unlist(lapply(cur_covs, match_quality_bit, data, holdout, num_covs, cur_covs, covs_max_list,
                                 tradeoff, PE_function, model, ridge_reg, lasso_reg, compute_var,
                                 A, network_lik_weight)) # Only last 2 args are new
