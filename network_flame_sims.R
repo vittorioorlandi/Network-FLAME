@@ -238,8 +238,8 @@ ATE_est_error <- function(Y, f, estimator_type, G, A, ATE, Z,
     dta$treated <- factor(Z)
     flame_out <- FLAME_bit(dta, dta, A = A,
                            network_lik_weight = network_lik_weight, iterate_FLAME = iterate_FLAME)
-    print(paste('Matched=', sum(flame_out$matched_data$matched)))
-    print(paste('ATE=', ATE(flame_out)))
+    #print(paste('Matched=', sum(flame_out$matched_data$matched)))
+    #print(paste('ATE=', ATE(flame_out)))
     error <- abs(ATE(flame_out) - ATE)
   } else if (estimator_type == 'degree_dist') {
     X <- count_degree(G)
@@ -309,9 +309,15 @@ simulate_network_matching <- function(sim_type = 'ER',
       pmat = forceSymmetric(pmat)
       bsizes = rep(n_units / n_blocks, n_blocks)
   }
- 
+  t0 = proc.time()[3]
+  tot_time = 0
   for (sim in 1:n_sims) {
-
+    t1 = proc.time()[3] - t0
+    t0 = proc.time()[3]
+    tot_time = tot_time + t1
+    print(paste('Simulation', sim, 'of', n_sims, "last one took", round(t1, 1), 'seconds.', 
+                'ETA:', round((tot_time/sim) * (n_sims - sim), 1), 'seconds.'))
+    
     # Generate an undirected Erdos-Renyi or SBM graph
     if (sim_type == 'ER') {
       G <- erdos.renyi.game(n_units, erdos_renyi_p, directed = FALSE)
@@ -396,10 +402,12 @@ simulate_network_matching <- function(sim_type = 'ER',
         ATE_est_error(Y, f, estimators[j], G, A, ATE, Z,
                       feature_counts, network_lik_weight, treat_prob, iterate_FLAME, threshold)
     }
+    print('Error:')
+    print(abs_error[sim, ])
   }
-
-  mean_abs_error <- colMeans(abs_error[!is.nan(abs_error)])
-  sd_abs_error <- apply(abs_error[!is.nan(abs_error)], 2, sd)
+  print('Done, total time elapsed:', tot_time)
+  mean_abs_error <- colMeans(abs_error)
+  sd_abs_error <- apply(abs_error, 2, sd)
 
   # print(sprintf('For %d units, %s coloring....', n_units, c('without', 'with')[1 + coloring]))
   print(sprintf('With p = %.2f,', erdos_renyi_p))

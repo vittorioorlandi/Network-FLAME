@@ -64,34 +64,25 @@
 # 
 # ## TEST 6
 # interference_params <- list(c(0, 1), c(0, 1), c(0, 1), c(5, 10), c(5, 10), c(0, 1), c(0, 1))
+
+set.seed(42069)
 setwd('~/Dropbox/Duke/projects/learning_interference/Network-FLAME/')
 source('network_flame_sims.R')
 
-er_p <- c(.05, .07, .1)
-interference_features <- list(c('kstar(2)', 'degree'),
-                              c('kstar(2)', 'degree'),
-                              c('degree', 'kstar(4)', '3-degree-neighb', 
-                                'betweenness', 'closeness', 'triangle', 'kstar(2)'),
-                              c('degree', 'kstar(4)', '3-degree-neighb', 
-                                'betweenness', 'closeness', 'triangle', 'kstar(2)'),
-                              c('degree', 'kstar(4)', '3-degree-neighb', 
-                                'betweenness', 'closeness', 'triangle', 'kstar(2)'))
-
-interference_features <- list(c('degree', 'kstar(4)', '3-degree-neighb', 
-                                'betweenness', 'closeness', 'triangle', 'kstar(2)'),
-                              c('degree', 'kstar(4)', '3-degree-neighb', 
-                                'betweenness', 'closeness', 'triangle', 'kstar(2)'))
-interference_params <- list(c(1, 1, 1, 10, -5, 1, 1), 
-                            c(0, 1, 1, 10, -5, 1, 10))
-
-
+interference_features <- c('degree', 'kstar(3)', '3-degree-neighb', 
+                            'betweenness', 'closeness', 'triangle', 'kstar(2)')
+interference_params <- list(c(1, 4, 1, 10, -5, 1, -4),
+                            c(0, 4, 1, 10, -5, 1, -4),
+                            c(0, 0, 0, 0, 0, 10, 0),
+                            c(0, 0, 0, 5, 5, 0, 0))
 out_all <- vector(mode = 'list', length = length(interference_params))
 for (i in 1:length(interference_params)) {
+  print(paste('Setting', i, 'of', length(interference_params)))
   out_all[[i]] <- simulate_network_matching(sim_type = 'ER', 
                                             n_sims = 50,
                                             n_units = 100,
-                                            n_treated = 50,
-                                            erdos_renyi_p = 0.1,
+                                            n_treated = 25,
+                                            erdos_renyi_p = 0.05,
                                             standardization_type = 'center',
                                             interference_type = 'drop_untreated_edges',
                                             estimators = c('true',
@@ -101,10 +92,10 @@ for (i in 1:length(interference_params)) {
                                                            'naive', 
                                                            'stratified', 
                                                            'SANIA'),
-                                            interference_features = interference_features[[i]],
+                                            interference_features = interference_features,
                                             interference_parameters = interference_params[[i]],
                                             coloring = TRUE, 
-                                            network_lik_weight = 0, 
+                                            network_lik_weight = 0.5, 
                                             iterate_FLAME = TRUE,
                                             multiplicative = FALSE, 
                                             threshold = 5)  
