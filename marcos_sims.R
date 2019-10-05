@@ -69,6 +69,7 @@ set.seed(42069)
 setwd('~/Dropbox/Duke/projects/learning_interference/Network-FLAME/')
 source('network_flame_sims.R')
 
+sim_name = 'dense_ER'
 interference_features <- c('degree', 'kstar(3)', '3-degree-neighb', 
                             'betweenness', 'closeness', 'triangle', 'kstar(2)')
 interference_params <- list(c(1, 4, 1, 10, -5, 1, -4),
@@ -76,30 +77,56 @@ interference_params <- list(c(1, 4, 1, 10, -5, 1, -4),
                             c(0, 0, 0, 0, 0, 10, 0),
                             c(0, 0, 0, 5, 5, 0, 0))
 out_all <- vector(mode = 'list', length = length(interference_params))
+settings = list(sim_type = 'ER', 
+                n_sims = 50,
+                n_units = 50,
+                n_treated = 25,
+                erdos_renyi_p = 0.1,
+                standardization_type = 'center',
+                interference_type = 'drop_untreated_edges',
+                estimators = c('true',
+                               'first_eigenvector',
+                               'all_eigenvectors',
+                               'FLAME',
+                               'naive', 
+                               'stratified', 
+                               'SANIA'),
+                interference_features = interference_features,
+                coloring = TRUE, 
+                network_lik_weight = 0.5, 
+                iterate_FLAME = TRUE,
+                multiplicative = FALSE, 
+                threshold = 5)
 for (i in 1:length(interference_params)) {
   print(paste('Setting', i, 'of', length(interference_params)))
-  out_all[[i]] <- simulate_network_matching(sim_type = 'ER', 
-                                            n_sims = 50,
-                                            n_units = 100,
-                                            n_treated = 25,
-                                            erdos_renyi_p = 0.05,
-                                            standardization_type = 'center',
-                                            interference_type = 'drop_untreated_edges',
-                                            estimators = c('true',
-                                                           'first_eigenvector',
-                                                           'all_eigenvectors',
-                                                           'FLAME',
-                                                           'naive', 
-                                                           'stratified', 
-                                                           'SANIA'),
-                                            interference_features = interference_features,
-                                            interference_parameters = interference_params[[i]],
-                                            coloring = TRUE, 
-                                            network_lik_weight = 0.5, 
-                                            iterate_FLAME = TRUE,
-                                            multiplicative = FALSE, 
-                                            threshold = 5)  
+  out_all[[i]] <- list(settings)
+  out_all[[i]]$results <- do.call(simulate_network_matching, 
+                                  c(list(interference_parameters=interference_params[[i]]), settings))
 }
+save(out_all, file=paste(sim_name, '.RData', sep=""))
 require(beepr)
 beep()
+
+require(ggplot2)
+require(reshape2)
+ggdata = NULL
+for (i in 1:length(interference_params)){
+  ggdata = rbind(ggdata, data.frame(as.data.frame(out_all[[i]]$results), setting=i))
+}
+
+ggdata = melt(ggdata, id.vars = 'setting')
+levels(ggdata$variable) = c('True', 'First Eigenvector', 'All Eigenvectors', 'FLAME', 'Naive', 'Stratified', 'SANIA')
+repmeans = rep(tapply(ggdata$value, ggdata$variable, mean), each=50 * length(interference_params))
+
+ggplot(ggdata, aes(x=variable, y=value)) + 
+  geom_violin(aes(fill=repmeans), draw_quantiles = 0.5 ) + 
+  scale_color_gradient(low = "#21A56C", high = "#FF4F4F",
+                      space = "Lab", na.value = "grey50",
+                      aesthetics = "fill") + 
+  xlab('') + ylab('Mean Absolute Error') + 
+  ggtitle('Simulation Results: Dense Graph') + 
+  facet_grid(setting ~.) +
+  theme_bw() + theme(legend.position='None', plot.title = element_text(hjust = 0.5), 
+                     text = element_text(color='black', size=16)) 
+
 

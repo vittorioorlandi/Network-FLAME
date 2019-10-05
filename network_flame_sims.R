@@ -405,7 +405,7 @@ simulate_network_matching <- function(sim_type = 'ER',
     print('Error:')
     print(abs_error[sim, ])
   }
-  print('Done, total time elapsed:', tot_time)
+  print(paste('Done, total time elapsed:', round(tot_time, 1)))
   mean_abs_error <- colMeans(abs_error)
   sd_abs_error <- apply(abs_error, 2, sd)
 
