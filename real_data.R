@@ -5,6 +5,7 @@ require(magrittr)
 source('network_flame_sims.R')
 source('FLAME_bit.R')
 source('ATE.R')
+require(purrr)
 
 my_combn <- function(x, m) {
   if (length(x) == 1) {
@@ -27,7 +28,7 @@ net_flame_output <- matrix(NA, nrow = 75, ncol = 3)
 for (qs in c(1,2,3)) {
   for (val in village_codes) {
 
-    val <- 1
+    val <- 75
     qs <- 1
     print(val)
     #A <-
@@ -133,12 +134,42 @@ for (qs in c(1,2,3)) {
     # impute missing val by median, lower
     #tmp$ration_color_2[is.na(tmp$ration_color_2)] <- as.factor(median(as.numeric(tmp$ration_color_2),na.rm = TRUE))
 
+    # divide tmp into training-holdout data
+    set.seed(2019)
+    percent_holdout <- 0.1
+    tmp_treated <- filter(tmp, treated == 1)
+    
+    n_treated <- nrow(tmp_treated)
+    
+    treated_holdout_inds <- sample(1:n_treated, round(percent_holdout * n_treated))
+    
+    tmp_treated_holdout <- tmp_treated[treated_holdout_inds, ]
+    tmp_treated_train <- tmp_treated[-treated_holdout_inds, ]
+    
+    tmp_control <- filter(tmp, treated == 0)
+    n_control <- nrow(tmp_control)
+    
+    control_holdout_inds <- sample(1:n_control, round(percent_holdout * n_control))
+    
+    tmp_control_holdout <- tmp_treated[treated_holdout_inds, ]
+    tmp_control_train <- tmp_control[-control_holdout_inds, ]
+    
+    tmp_train <- rbind(tmp_treated_train, tmp_control_train)
+    tmp_holdout <- rbind(tmp_treated_holdout, tmp_control_holdout)
+    
     # FLAME
-    flame_out <- FLAME_bit(tmp, tmp, A = A, network_lik_weight = 0, iterate_FLAME = TRUE)
+    flame_out <- FLAME_bit(tmp_train, tmp_holdout, A = A, network_lik_weight = 0, iterate_FLAME = TRUE)
     ATE_out <- ATE(flame_out)
-    if (val == 1) {
-      covs_list_out <- flame_out$covs_list
-    }
     net_flame_output[val][qs] <- ATE_out
+    
+    df_flame_out <- flame_out$matched_data
+    
+
+    # write FLAME output to disk 
+    # Save an object to a file
+    saveRDS(flame_out, file = paste("./flame_output/village_",val,'_question_',qs,".rds",sep = ""))
+    # Restore the object
+    #readRDS(file = "my_data.rds")
+    
   }
 }

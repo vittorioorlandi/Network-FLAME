@@ -29,12 +29,3 @@ ATE <- function(FLAME_object) {
 
   return(sum(effect * size)/sum(size))
 }
-
-ATT <- function(FLAME_object) {
-  # Computes the ATT by:
-  # For each treated unit: 
-  # Find the difference between its outcome and the average control outcome in its MG
-  # Averages these differences across all treated units
-  
-  matched_groups <- FLAME
-}
