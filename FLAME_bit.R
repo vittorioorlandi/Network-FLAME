@@ -332,12 +332,21 @@ FLAME_bit <- function(data, holdout, tradeoff = 0.1, compute_var = FALSE, PE_fun
   require(dplyr)
 
   num_covs <- ncol(data) - 2 # ignore treatment and outcome
-
+  
   # Stop if covariates are not factors
-  if (Reduce("|", sapply(1:num_covs, function(x) !is.factor(data[,x] ))) |
-      Reduce("|", sapply(1:num_covs, function(x) !is.factor(holdout[,x] )))) {
+  if (Reduce("|", sapply(1:num_covs, function(x) !is.factor(data[,x] )))) {
     stop("Covariates are not factor data type.")
   }
+  for (val in 1:num_covs ) {
+    if (  !is.factor(holdout[,val])  ) {
+      stop("Covariates are not factor data type.")
+    }
+  }
+  
+#  if (Reduce("|", sapply(1:num_covs, function(x) !is.factor(data[,x] ))) |
+#      Reduce("|", sapply(1:num_covs, function(x) !is.factor(holdout[,x] )))) {
+#    stop("Covariates are not factor data type.")
+#  }
 
   # Stop if treatment isn't factor
   if (!is.factor(data[,num_covs + 2]) | !is.factor(holdout[,num_covs + 2])) {
@@ -348,7 +357,7 @@ FLAME_bit <- function(data, holdout, tradeoff = 0.1, compute_var = FALSE, PE_fun
   if (!is.numeric(data[,num_covs + 1]) | !is.numeric(holdout[,num_covs + 1])) {
     stop("Outcome variable is not numeric data type")
   }
-
+  
   tmp <- data
   data <- drop_unmatchable(data)$data
   holdout <- drop_unmatchable(holdout)$data
@@ -514,7 +523,10 @@ FLAME_bit <- function(data, holdout, tradeoff = 0.1, compute_var = FALSE, PE_fun
 
     # Set matched = num_covs and get those matched units
     data[match_index,'matched'] = length(cur_covs)
+    
+    sum(match_index)
     return_df = rbind(return_df,data[match_index,])
+    #browser()
     CATE[[level]] <- get_CATE_bit(data, match_index, index, cur_covs, covs_max_list, column, factor_level, compute_var, num_covs)
 
     # if (sum(match_index) > 0) { # Have a new matched group

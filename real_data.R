@@ -6,6 +6,7 @@ source('network_flame_sims.R')
 source('FLAME_bit.R')
 source('ATE.R')
 require(purrr)
+library(splitstackshape)
 
 my_combn <- function(x, m) {
   if (length(x) == 1) {
@@ -13,7 +14,6 @@ my_combn <- function(x, m) {
   }
   return(combn(as.integer(x), m, simplify = FALSE))
 }
-
 sourceCpp('subgraph_enumerate.cpp')
 
 # all_dat <- load('application.RData')
@@ -106,7 +106,7 @@ for (qs in c(1,2,3)) {
     # Enumerates all possible subgraphs and puts into dataframe
     # all_subgraphs <- threshold_all_neighborhood_subgraphs(G, 3)
 
-    all_subgraphs <- get_neighb_subgraphs(A, units_with_treatment_info, 2)
+    all_subgraphs <- get_neighb_subgraphs(A, units_with_treatment_info, 1)
     all_features = gen_all_features(G, all_subgraphs)
 
     dta = gen_data(all_features[[1]])
@@ -135,27 +135,47 @@ for (qs in c(1,2,3)) {
     #tmp$ration_color_2[is.na(tmp$ration_color_2)] <- as.factor(median(as.numeric(tmp$ration_color_2),na.rm = TRUE))
 
     # divide tmp into training-holdout data
-    set.seed(2019)
-    percent_holdout <- 0.1
-    tmp_treated <- filter(tmp, treated == 1)
+    # set.seed(2019)
+    # percent_holdout <- 0.1
+    # tmp_treated <- filter(tmp, treated == 1)
+    # 
+    # n_treated <- nrow(tmp_treated)
+    # 
+    # treated_holdout_inds <- sample(1:n_treated, round(percent_holdout * n_treated))
+    # 
+    # tmp_treated_holdout <- tmp_treated[treated_holdout_inds, ]
+    # tmp_treated_train <- tmp_treated[-treated_holdout_inds, ]
+    # 
+    # tmp_control <- filter(tmp, treated == 0)
+    # n_control <- nrow(tmp_control)
+    # 
+    # control_holdout_inds <- sample(1:n_control, round(percent_holdout * n_control))
+    # 
+    # tmp_control_holdout <- tmp_treated[treated_holdout_inds, ]
+    # tmp_control_train <- tmp_control[-control_holdout_inds, ]
+    # 
+    # tmp_train <- rbind(tmp_treated_train, tmp_control_train)
+    # tmp_holdout <- rbind(tmp_treated_holdout, tmp_control_holdout)
     
-    n_treated <- nrow(tmp_treated)
+    # method 2 of sample splitting
     
-    treated_holdout_inds <- sample(1:n_treated, round(percent_holdout * n_treated))
+    # tmp_holdout <- stratified(tmp, c("treated","outcome"), 0.2, keep.rownames = TRUE)
+    #   # keep of original data only # names(tmp)
+    # tmp_holdout <- subset(tmp_holdout, select = names(tmp))
     
-    tmp_treated_holdout <- tmp_treated[treated_holdout_inds, ]
-    tmp_treated_train <- tmp_treated[-treated_holdout_inds, ]
+    sample <- stratified(tmp, c("treated","outcome"), 0.2, bothSets = TRUE)
+    tmp_holdout <- sample$SAMP1
+    tmp_train <- sample$SAMP2
     
-    tmp_control <- filter(tmp, treated == 0)
-    n_control <- nrow(tmp_control)
+    tmp_holdout <- as.data.frame(tmp_holdout)
+    tmp_train <- as.data.frame(tmp_train)
     
-    control_holdout_inds <- sample(1:n_control, round(percent_holdout * n_control))
     
-    tmp_control_holdout <- tmp_treated[treated_holdout_inds, ]
-    tmp_control_train <- tmp_control[-control_holdout_inds, ]
+    # keep of original data only # names(tmp)
+    #tmp_holdout <- subset(tmp_holdout, select = names(tmp))
     
-    tmp_train <- rbind(tmp_treated_train, tmp_control_train)
-    tmp_holdout <- rbind(tmp_treated_holdout, tmp_control_holdout)
+    # dim(tmp_holdout)
+    #tmp_holdout <- tmp
     
     # FLAME
     flame_out <- FLAME_bit(tmp_train, tmp_holdout, A = A, network_lik_weight = 0, iterate_FLAME = TRUE)
@@ -170,6 +190,7 @@ for (qs in c(1,2,3)) {
     saveRDS(flame_out, file = paste("./flame_output/village_",val,'_question_',qs,".rds",sep = ""))
     # Restore the object
     #readRDS(file = "my_data.rds")
-    
+    # save(tmp_train, tmp_holdout, file = 'tmp.RData')
+
   }
 }
