@@ -69,7 +69,7 @@ set.seed(42069)
 setwd('~/Dropbox/Duke/projects/learning_interference/Network-FLAME/')
 source('network_flame_sims.R')
 
-sim_name = 'dense_ER'
+sim_name = 'sparse_ER'
 interference_features <- c('degree', 'kstar(3)', '3-degree-neighb', 
                             'betweenness', 'closeness', 'triangle', 'kstar(2)')
 interference_params <- list(c(1, 4, 1, 10, -5, 1, -4),
@@ -121,12 +121,83 @@ repmeans = rep(tapply(ggdata$value, ggdata$variable, mean), each=50 * length(int
 ggplot(ggdata, aes(x=variable, y=value)) + 
   geom_violin(aes(fill=repmeans), draw_quantiles = 0.5 ) + 
   scale_color_gradient(low = "#21A56C", high = "#FF4F4F",
-                      space = "Lab", na.value = "grey50",
-                      aesthetics = "fill") + 
+                       space = "Lab", na.value = "grey50",
+                       aesthetics = "fill") + 
   xlab('') + ylab('Mean Absolute Error') + 
   ggtitle('Simulation Results: Dense Graph') + 
-  facet_grid(setting ~.) +
+  facet_grid(setting ~., scales = 'free_y') +
   theme_bw() + theme(legend.position='None', plot.title = element_text(hjust = 0.5), 
                      text = element_text(color='black', size=16)) 
+
+
+sim_name = 'ER(100, 0,05)_degree_triangle'
+interference_features <- c('degree', 'triangle')
+interference_params <- list(c(5, 0), c(4, 1), c(3, 2), c(2, 3), c(1, 4), c(0, 5))
+out_all <- vector(mode = 'list', length = length(interference_params))
+settings = list(sim_type = 'ER', 
+                n_sims = 50,
+                n_units = 50,
+                n_treated = 25,
+                erdos_renyi_p = 0.1,
+                standardization_type = 'center',
+                interference_type = 'drop_mutual_untreated_edges',
+                estimators = c('true',
+                               'first_eigenvector',
+                               'all_eigenvectors',
+                               'FLAME',
+                               'naive', 
+                               'stratified', 
+                               'SANIA'),
+                interference_features = interference_features,
+                coloring = TRUE, 
+                network_lik_weight = 0.5, 
+                iterate_FLAME = TRUE,
+                multiplicative = FALSE, 
+                threshold = 5)
+for (i in 1:length(interference_params)) {
+  print(paste('Setting', i, 'of', length(interference_params)))
+  out_all[[i]] <- list(settings)
+  out_all[[i]]$results <- do.call(simulate_network_matching, 
+                                  c(list(interference_parameters=interference_params[[i]]), 
+                                    settings))
+}
+save(out_all, file=paste(sim_name, '.RData', sep=""))
+require(beepr)
+beep()
+
+require(ggplot2)
+require(reshape2)
+ggdata = NULL
+for (i in 1:length(interference_params)){
+  ggdata = rbind(ggdata, data.frame(as.data.frame(out_all[[i]]$results), setting=i))
+}
+
+ggdata = data.frame(mean = c(tapply(ggdata$FLAME, ggdata$setting, mean), 
+                             tapply(ggdata$stratified, ggdata$setting, mean)),
+                    lo = c(tapply(ggdata$FLAME, ggdata$setting, 
+                                  function(x) sort(x)[length(x) * 0.25]), 
+                           tapply(ggdata$stratified, ggdata$setting, 
+                                  function(x) sort(x)[length(x) * 0.25])),
+                    hi = c(tapply(ggdata$FLAME, ggdata$setting, 
+                                  function(x) sort(x)[length(x) * 0.75]), 
+                           tapply(ggdata$stratified, ggdata$setting, 
+                                  function(x) sort(x)[length(x) * 0.75])),
+                    setting = rep(0:5, 2), method=rep(c('FLAME', 'Stratified'), each=6))
+ggdata$setting
+ggplot(ggdata, aes(x=setting, y=mean, color=method, fill=method, ymin=lo, ymax=hi)) + 
+  geom_ribbon(alpha=0.2, color=NA) + geom_line(size=1) +  geom_point() + 
+  xlab('x') + ylab('Mean Absolute Error') + 
+  scale_color_brewer(palette='Set1') + scale_fill_brewer(palette='Set1') + 
+  ggtitle('Simulation Results: f = ((6-x)Degree + xTriangles') + 
+  theme_bw() + theme(legend.title = element_blank(), plot.title = element_text(hjust = 0.5), 
+                     text = element_text(color='black', size=16), 
+                     legend.position = c(0.9,0.9), 
+                     legend.background = element_rect(colour = 'black')) 
+
+
+
+
+
+
 
 
