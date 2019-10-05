@@ -449,15 +449,15 @@ FLAME_bit <- function(data, holdout, tradeoff = 0.1, compute_var = FALSE, PE_fun
          (sum(data[,'treated'] == 0) > 0) &&
          (sum(data[,'treated'] == 1) > 0)) {
 
-    unm_data <- drop_unmatchable(data)$unmatchable
-    unm_hld <- drop_unmatchable(holdout)$unmatchable
-    unmatchable <- union(unm_data, unm_hld)
-    if (!is.null(unmatchable)){
-      data <- data[, -unmatchable]
-      holdout <- holdout[, -unmatchable]
-      cur_covs <- cur_covs[-unmatchable]
-      covs_max_list <- covs_max_list[-unmatchable]
-    }
+    #unm_data <- drop_unmatchable(data)$unmatchable
+    #unm_hld <- drop_unmatchable(holdout)$unmatchable
+    #unmatchable <- union(unm_data, unm_hld)
+    #if (!is.null(unmatchable)){
+    #  data <- data[, -unmatchable]
+    #  holdout <- holdout[, -unmatchable]
+    #  cur_covs <- cur_covs[-unmatchable]
+    #  covs_max_list <- covs_max_list[-unmatchable]
+    #}
     # print('Data variance')
     # print(apply(data, 2, function(j) c(var(j), var(j[data$treated==1]), var(j[data$treated==0]))))
     # print('Holdout variance')
