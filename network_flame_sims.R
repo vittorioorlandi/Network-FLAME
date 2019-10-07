@@ -201,7 +201,8 @@ new_sg_counter <- function(g, threshold) {
 }
 
 ATE_est_error <- function(Y, f, estimator_type, G, A, ATE, Z,
-                          feature_counts, network_lik_weight, treat_prob, iterate_FLAME, threshold) {
+                          feature_counts, network_lik_weight, treat_prob, 
+                          iterate_FLAME, threshold, COV=NULL) {
   # Takes in:
   #  The outcome vector Y
   #  The interference vector f
@@ -233,6 +234,7 @@ ATE_est_error <- function(Y, f, estimator_type, G, A, ATE, Z,
     all_features <- features_and_graphs$feats
     sg_types <- features_and_graphs$types
     dta <- gen_data(all_features)
+    dta <- cbind(dta, COV)
     dta <- data.frame(sapply(dta, factor), stringsAsFactors = T)
     dta$outcome <- Y
     dta$treated <- factor(Z)
@@ -274,6 +276,8 @@ simulate_network_matching <- function(sim_type = 'ER',
                                       n_blocks = 5,
                                       iterate_FLAME = FALSE,
                                       multiplicative = FALSE,
+                                      covariate_weight = 0, 
+                                      covariate_lvs = 3, 
                                       threshold) {
 
   if (network_lik_weight < 0) {
@@ -290,7 +294,14 @@ simulate_network_matching <- function(sim_type = 'ER',
   colnames(abs_error) <- estimators
 
   # Parameters used to generate outcome
-  alpha <- rnorm(n_units, 0, 1)
+  X = matrix(0, n_units, covariate_lvs)
+  alpha = rep(0, n_units)
+  for(i in 1:n_units){
+    X[i, sample(1:covariate_lvs, 1)] = 1
+    alpha[i] = rnorm(1, which(X[i, ]==1) * covariate_weight, 1)
+  }
+  if(covariate_weight==0)
+    X = NULL
   beta <- rnorm(n_units, 5, 1)
   ATE <- mean(beta)
 
@@ -400,7 +411,8 @@ simulate_network_matching <- function(sim_type = 'ER',
     for (j in 1:length(estimators)) {
       abs_error[sim, j] <-
         ATE_est_error(Y, f, estimators[j], G, A, ATE, Z,
-                      feature_counts, network_lik_weight, treat_prob, iterate_FLAME, threshold)
+                      feature_counts, network_lik_weight, treat_prob, iterate_FLAME, threshold,
+                      X)
     }
     print('Error:')
     print(abs_error[sim, ])
