@@ -143,7 +143,7 @@ ggplot(ggdata, aes(x=variable, y=value)) +
                                setting=1:length(interference_params)), 
              aes(yintercept=y), linetype=2) + 
   scale_fill_brewer(palette = 'Set1') + 
-  xlab('') + ylab('Mean Absolute Error') + 
+  xlab('') + ylab('Absolute Error') + 
   ggtitle('Simulation Results: Multiplicative Interference') + 
   facet_grid(setting ~., scales = 'free_y') +
   theme_bw() + theme(legend.position='None', plot.title = element_text(hjust = 0.5), 
@@ -228,7 +228,7 @@ ggplot(ggdata, aes(x=variable, y=value)) +
                                setting=1:length(interference_params)), 
              aes(yintercept=y), linetype=2) + 
   scale_fill_brewer(palette = 'Set1') + 
-  xlab('') + ylab('Mean Absolute Error') + 
+  xlab('') + ylab('Absolute Error') + 
   ggtitle('Simulation Results: Additive Interference') + 
   facet_grid(setting ~., scales = 'free_y') +
   theme_bw() + theme(legend.position='None', plot.title = element_text(hjust = 0.5), 
@@ -301,4 +301,78 @@ ggplot(ggdata, aes(x=setting, y=mean, color=method, fill=method, ymin=lo, ymax=h
                      legend.position = c(0.9,0.89), 
                      legend.background = element_rect(colour = 'black')) 
 ggsave(paste(sim_name, '.png', sep=''), width=10, height=5, units = 'in', device = 'png', dpi=300)
+
+##################################################################################################
+# Covariate Adjustment
+##################################################################################################
+sim_name = 'ER(50, 0.05)_cov_adjustment'
+cov_weights = c(5, 10, 15, 20, 25)
+n_settings = 5
+out_all <- vector(mode = 'list', length = n_settings)
+settings = list(sim_type = 'ER', 
+                n_sims = 25,
+                n_units = 50,
+                n_treated = 25,
+                erdos_renyi_p = 0.05,
+                standardization_type = 'center',
+                interference_type = 'drop_mutual_untreated_edges',
+                estimators = c('true',
+                               'first_eigenvector',
+                               'all_eigenvectors',
+                               'naive', 
+                               'FLAME',
+                               'stratified', 
+                               'SANIA'),
+                coloring = TRUE, 
+                network_lik_weight = 0.5, 
+                interference_features = c('degree', 'triangle', 'betweenness'),
+                interference_parameters = c(1, 1, 1),
+                iterate_FLAME = TRUE,
+                multiplicative = FALSE, 
+                threshold = 5)
+for (i in 1:n_settings) {
+  print(paste('Setting', i, 'of', n_settings))
+  out_all[[i]] <- list(settings)
+  out_all[[i]]$results <- do.call(simulate_network_matching, 
+                                  c(list(covariate_weight=cov_weights[i]), settings))
+}
+save(out_all, file=paste(sim_name, '.RData', sep=""))
+require(beepr)
+beep()
+
+
+
+#### Plotting code
+ggdata = data.frame(matrix(NA, 7 * n_settings, 5))
+names(ggdata) = c('method', 'setting', 'mean', 'lo', 'hi')
+k = 1
+for (i in 1:n_settings){
+  for(j in 1:7){
+    m = out_all[[i]]$results[, j]
+   ggdata[k, 'method'] = colnames(out_all[[i]]$results)[j]
+   ggdata[k, 'setting'] = cov_weights[i]
+   ggdata[k, 'mean'] = mean(m)
+   ggdata[k, 'lo'] = sort(m)[0.25 * length(m)]
+   ggdata[k, 'hi'] = sort(m)[0.75 * length(m)]
+   k = k + 1
+  }
+}
+
+ggdata$method = factor(ggdata$method, levels = c('FLAME', 'first_eigenvector', 
+                                 'all_eigenvectors', 'naive', 'SANIA', 'stratified', 'true'), 
+                       labels= c('FLAME-Networks', 'First\n Eigenvector', 
+                                 'All Eigenvectors', 'Naive',  'SANIA', 'Stratified', 'True'))
+
+ggplot(ggdata[!ggdata$method %in% c('SANIA', 'First\n Eigenvector'), ], 
+       aes(x=setting, y=mean, ymin=lo, ymax=hi, color=method, linetype=method)) + 
+  geom_line(size=1) + geom_point() + 
+  scale_color_brewer(palette = 'Set1') + 
+  labs(color='Method', linetype='Method') + 
+  xlab(TeX('Importance of Covariate ($\\beta$)')) + ylab('Mean Absolute Error') + 
+  ggtitle('Simulation Results: Covariate Adjustment') + 
+  theme_bw() + theme(plot.title = element_text(hjust = 0.5), 
+                     text = element_text(color='black', size=16),
+                     legend.position = c(0.15, 0.8), legend.background = element_rect(color='black')) 
+
+ggsave(paste(sim_name, '.png', sep=''), width=10, height=7, units = 'in', device = 'png', dpi=300)
 
